@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ฐานความรู้ - Dr. Clear Aligner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .drop-zone {
+      border: 3px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: #EBF5FF;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">
+    <div class="navbar-logo">🦷</div>
+    <div>
+      <div class="navbar-title">Dr. Clear Aligner</div>
+      <div class="navbar-subtitle">ฐานความรู้</div>
+    </div>
+  </a>
+  <div class="navbar-nav">
+    <a href="index.html" class="nav-link">🏠 หน้าหลัก</a>
+    <a href="assessment.html" class="nav-link">➕ ประเมินฟัน</a>
+    <a href="patients.html" class="nav-link">👥 ลูกค้า</a>
+    <a href="knowledge.html" class="nav-link active">📚 ฐานความรู้</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">📚 ฐานความรู้ทันตกรรม</div>
+      <div class="page-subtitle">เพิ่มไฟล์ความรู้ใหม่ เพื่อให้ระบบเรียนรู้เคสใหม่ๆ</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+    <!-- Upload Section -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📤 อัปโหลดไฟล์ความรู้ใหม่</div>
+        </div>
+
+        <div class="alert alert-info">
+          💡 รองรับไฟล์ PDF และ TXT เช่น เคสพิเศษ ประสบการณ์ใหม่ แนวทางรักษาใหม่ๆ
+        </div>
+
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div style="font-size:48px;margin-bottom:12px">📁</div>
+          <div style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:6px">คลิกหรือลากไฟล์มาวาง</div>
+          <div style="font-size:13px;color:var(--text-muted)">รองรับ: .pdf, .txt (ขนาดไม่เกิน 10MB)</div>
+          <input type="file" id="fileInput" style="display:none" accept=".pdf,.txt" onchange="handleFileSelect(this.files)">
+        </div>
+
+        <div id="uploadPreview" style="display:none;margin-top:16px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px">📄 ไฟล์ที่เลือก:</div>
+          <div id="previewContent" style="background:var(--bg);border-radius:8px;padding:12px;font-size:13px;max-height:120px;overflow-y:auto"></div>
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">แท็ก / หมวดหมู่ (คั่นด้วยจุลภาค)</label>
+            <input type="text" class="form-control" id="fileTags" placeholder="เช่น ฟันเก, เคสพิเศษ, เด็ก">
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="uploadFile()" id="uploadBtn">
+            💾 บันทึกลงฐานความรู้
+          </button>
+        </div>
+      </div>
+
+      <!-- Built-in knowledge -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header">
+          <div class="card-title">📖 ความรู้ในตัวระบบ</div>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+          ระบบมีความรู้พื้นฐานจากเอกสาร DentalKnowledge ครอบคลุม:
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${[
+            ['🦷 ปัญหาการจัดเรียงฟัน', '9 ประเภท (Crowding, Spacing, Overbite ฯลฯ)'],
+            ['⚕️ ปัญหาทั่วไป', '5 ประเภท (ฟันผุ, หินปูน, ฟันคุด ฯลฯ)'],
+            ['✨ งานความสวยงาม', '3 ประเภท (Veneer, Crown, ฟอกสี)'],
+            ['📋 ขั้นตอน Clear Aligner', 'ครบทุกขั้นตอน'],
+            ['📏 เทคนิคทันตกรรม', 'IPR, Distalization, Expansion ฯลฯ'],
+          ].map(([t, d]) => `
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--bg);border-radius:6px">
+              <span style="font-weight:600">${t}</span>
+              <span style="font-size:12px;color:var(--text-muted)">${d}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- File List -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📂 ไฟล์ที่เพิ่มมาแล้ว</div>
+          <span id="fileCount" style="font-size:13px;color:var(--text-muted)"></span>
+        </div>
+        <div id="fileList">
+          <div style="text-align:center;padding:20px"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="spinner"></div>
+  <div>กำลังอัปโหลด...</div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/dental-data.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+  let selectedFile = null;
+  let selectedContent = '';
+
+  // Drag & Drop
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    handleFileSelect(e.dataTransfer.files);
+  });
+
+  function handleFileSelect(files) {
+    const file = files[0];
+    if (!file) return;
+    selectedFile = file;
+
+    if (file.type === 'application/pdf') {
+      selectedContent = `[PDF File: ${file.name}] - ขนาด ${(file.size/1024).toFixed(1)} KB`;
+      showPreview(`📄 ${file.name} (PDF - ${(file.size/1024).toFixed(1)} KB)\nระบบจะบันทึกชื่อไฟล์และข้อมูลลงฐานความรู้`);
+    } else {
+      const reader = new FileReader();
+      reader.onload = e => {
+        selectedContent = e.target.result;
+        showPreview(selectedContent.substring(0, 500) + (selectedContent.length > 500 ? '...' : ''));
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+  }
+
+  function showPreview(text) {
+    document.getElementById('previewContent').textContent = text;
+    document.getElementById('uploadPreview').style.display = 'block';
+  }
+
+  async function uploadFile() {
+    if (!selectedFile || !selectedContent) return;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    document.getElementById('uploadBtn').disabled = true;
+
+    try {
+      const tags = document.getElementById('fileTags').value.split(',').map(t => t.trim()).filter(Boolean);
+      await KnowledgeFiles.create({
+        filename: selectedFile.name,
+        file_type: selectedFile.type || 'text/plain',
+        content: selectedContent,
+        tags: tags
+      });
+      showToast('บันทึกไฟล์ความรู้เรียบร้อย! 📚', 'success');
+      document.getElementById('uploadPreview').style.display = 'none';
+      document.getElementById('fileTags').value = '';
+      selectedFile = null; selectedContent = '';
+      loadFiles();
+    } catch(err) {
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    } finally {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      document.getElementById('uploadBtn').disabled = false;
+    }
+  }
+
+  async function loadFiles() {
+    try {
+      const files = await KnowledgeFiles.getAll();
+      document.getElementById('fileCount').textContent = `${files.length} ไฟล์`;
+      const fl = document.getElementById('fileList');
+
+      if (files.length === 0) {
+        fl.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted)">
+          <div style="font-size:36px;margin-bottom:8px">📭</div>
+          <div>ยังไม่มีไฟล์ความรู้เพิ่มเติม</div>
+          <div style="font-size:13px;margin-top:4px">อัปโหลดได้จากฝั่งซ้าย</div>
+        </div>`;
+        return;
+      }
+
+      fl.innerHTML = `<div class="file-list">${files.map(f => `
+        <div class="file-card">
+          <div class="file-icon">${f.file_type?.includes('pdf') ? '📄' : '📝'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.filename}</div>
+            <div style="font-size:12px;color:var(--text-muted)">
+              ${new Date(f.created_at).toLocaleDateString('th-TH')}
+              ${f.tags?.length ? ' · ' + f.tags.join(', ') : ''}
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${f.content.substring(0,80)}...</div>
+          </div>
+          <button onclick="deleteFile('${f.id}', '${f.filename}')"
+            class="btn btn-danger btn-sm" style="flex-shrink:0">🗑️</button>
+        </div>
+      `).join('')}</div>`;
+    } catch(err) {
+      document.getElementById('fileList').innerHTML = `<div class="alert alert-danger">โหลดไม่สำเร็จ: ${err.message}</div>`;
+    }
+  }
+
+  async function deleteFile(id, name) {
+    if (!confirm(`ลบไฟล์ "${name}" ออกจากฐานความรู้?`)) return;
+    try {
+      await KnowledgeFiles.delete(id);
+      showToast('ลบไฟล์เรียบร้อย', 'success');
+      loadFiles();
+    } catch(err) {
+      showToast('ลบไม่สำเร็จ: ' + err.message, 'error');
+    }
+  }
+
+  function showToast(msg, type='info') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`; t.textContent = msg;
+    c.appendChild(t); setTimeout(() => t.remove(), 4000);
+  }
+
+  loadFiles();
+</script>
+</body>
+</html>

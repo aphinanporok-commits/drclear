@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประเมินฟัน - Dr. Clear Aligner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .step-bar {
+      display: flex; gap: 0; margin-bottom: 28px;
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .step {
+      flex: 1; padding: 14px; text-align: center;
+      background: white; border-right: 1px solid var(--border);
+      font-size: 13px; font-weight: 600; color: var(--text-muted);
+      transition: all 0.3s;
+    }
+    .step:last-child { border-right: none; }
+    .step.active { background: var(--primary); color: white; }
+    .step.done { background: var(--success); color: white; }
+    .step-num { font-size: 18px; display: block; margin-bottom: 2px; }
+
+    .step-content { display: none; }
+    .step-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    .nav-buttons { display: flex; justify-content: space-between; margin-top: 24px; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">
+    <div class="navbar-logo">🦷</div>
+    <div>
+      <div class="navbar-title">Dr. Clear Aligner</div>
+      <div class="navbar-subtitle">ประเมินฟันลูกค้า</div>
+    </div>
+  </a>
+  <div class="navbar-nav">
+    <a href="index.html" class="nav-link">🏠 หน้าหลัก</a>
+    <a href="assessment.html" class="nav-link active">➕ ประเมินฟัน</a>
+    <a href="patients.html" class="nav-link">👥 ลูกค้า</a>
+    <a href="knowledge.html" class="nav-link">📚 ฐานความรู้</a>
+  </div>
+</nav>
+
+<div class="container-sm">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">➕ ประเมินฟันลูกค้า</div>
+      <div class="page-subtitle">กรอกข้อมูล → อัปโหลดรูป → เลือกปัญหา → รับรายงาน</div>
+    </div>
+    <a href="index.html" class="btn btn-outline btn-sm">← กลับ</a>
+  </div>
+
+  <!-- Step Bar -->
+  <div class="step-bar">
+    <div class="step active" id="step1-tab">
+      <span class="step-num">①</span>ข้อมูลลูกค้า
+    </div>
+    <div class="step" id="step2-tab">
+      <span class="step-num">②</span>รูปถ่ายฟัน
+    </div>
+    <div class="step" id="step3-tab">
+      <span class="step-num">③</span>เลือกปัญหา
+    </div>
+    <div class="step" id="step4-tab">
+      <span class="step-num">④</span>รายงาน & บันทึก
+    </div>
+  </div>
+
+  <!-- STEP 1: Patient Info -->
+  <div class="step-content active" id="step1">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">👤 ข้อมูลลูกค้า</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">ชื่อ-นามสกุล *</label>
+          <input type="text" class="form-control" id="patientName" placeholder="กรอกชื่อลูกค้า">
+        </div>
+        <div class="form-group">
+          <label class="form-label">อายุ</label>
+          <input type="number" class="form-control" id="patientAge" placeholder="อายุ (ปี)" min="1" max="99">
+        </div>
+        <div class="form-group">
+          <label class="form-label">เพศ</label>
+          <select class="form-control" id="patientGender">
+            <option value="">-- เลือก --</option>
+            <option value="ชาย">ชาย</option>
+            <option value="หญิง">หญิง</option>
+            <option value="ไม่ระบุ">ไม่ระบุ</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">เบอร์โทรศัพท์</label>
+          <input type="tel" class="form-control" id="patientPhone" placeholder="0xx-xxx-xxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">อีเมล</label>
+          <input type="email" class="form-control" id="patientEmail" placeholder="example@email.com">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">หมายเหตุเพิ่มเติม</label>
+          <textarea class="form-control" id="patientNotes" placeholder="ประวัติเพิ่มเติม ยาที่ใช้ อาการพิเศษ ฯลฯ"></textarea>
+        </div>
+      </div>
+      <div class="nav-buttons">
+        <div></div>
+        <button class="btn btn-primary" onclick="goStep(2)">ถัดไป: รูปถ่ายฟัน →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Photos -->
+  <div class="step-content" id="step2">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📸 อัปโหลดรูปถ่ายฟัน 6 มุม</div>
+      </div>
+      <div class="alert alert-info">
+        💡 ถ่ายรูปตามมุมมองด้านล่าง ให้เห็นฟันชัดเจน มีแสงเพียงพอ
+      </div>
+      <div class="photo-grid" id="photoGrid">
+        <!-- สร้างโดย JS -->
+      </div>
+      <div class="nav-buttons">
+        <button class="btn btn-outline" onclick="goStep(1)">← ย้อนกลับ</button>
+        <button class="btn btn-primary" onclick="goStep(3)">ถัดไป: เลือกปัญหา →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Conditions -->
+  <div class="step-content" id="step3">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">✅ เลือกปัญหาที่พบ</div>
+        <div style="font-size:13px;color:var(--text-muted)" id="selectedCount">เลือกแล้ว: 0 ข้อ</div>
+      </div>
+      <div class="alert alert-info">
+        💡 ดูรูปถ่ายแล้วติ๊กเลือกปัญหาที่พบ ระบบจะสร้างรายงานและแผนรักษาให้อัตโนมัติ
+      </div>
+      <div id="conditionList"><!-- สร้างโดย JS --></div>
+      <div class="nav-buttons">
+        <button class="btn btn-outline" onclick="goStep(2)">← ย้อนกลับ</button>
+        <button class="btn btn-primary" onclick="generateAndGoStep4()">สร้างรายงาน 📊 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Report -->
+  <div class="step-content" id="step4">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📊 รายงานการประเมิน</div>
+      </div>
+
+      <!-- Aligner Badge -->
+      <div style="text-align:center;margin-bottom:20px" id="alignerResult"></div>
+
+      <!-- Pre-treatment warnings -->
+      <div id="preWarnings"></div>
+
+      <!-- Report text -->
+      <div class="form-group">
+        <label class="form-label">รายงานการประเมิน</label>
+        <div class="report-box" id="reportBox"></div>
+      </div>
+
+      <!-- Dentist Notes -->
+      <div class="form-group">
+        <label class="form-label">หมายเหตุจากทันตแพทย์ (เพิ่มเติม)</label>
+        <textarea class="form-control" id="dentistNotes" placeholder="หมายเหตุเพิ่มเติม..." rows="3"></textarea>
+      </div>
+
+      <!-- Photo thumbnails -->
+      <div style="margin-bottom:16px">
+        <div class="form-label" style="margin-bottom:8px">รูปถ่ายที่อัปโหลด</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="photoThumbs"></div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-outline" onclick="goStep(3)">← ย้อนกลับ</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-outline" onclick="printReport()">🖨️ พิมพ์</button>
+          <button class="btn btn-success" onclick="saveAssessment()" id="saveBtn">
+            💾 บันทึกลงระบบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="spinner"></div>
+  <div id="loadingText">กำลังบันทึก...</div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/dental-data.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+  // ===== STATE =====
+  let currentStep = 1;
+  let photoFiles = {};
+  let selectedConditions = new Set();
+  let generatedReport = null;
+
+  const PHOTO_SLOTS = [
+    { id: 'front_closed', label: 'ด้านหน้า\n(ฟันชิดกัน)', icon: '😐' },
+    { id: 'front_open',   label: 'ด้านหน้า\n(ฟันห่างกัน)', icon: '😮' },
+    { id: 'left',         label: 'ด้านซ้าย\n(กัดฟัน)', icon: '◀️' },
+    { id: 'top',          label: 'ด้านบน', icon: '⬆️' },
+    { id: 'bottom',       label: 'ด้านล่าง', icon: '⬇️' },
+    { id: 'right',        label: 'ด้านขวา\n(กัดฟัน)', icon: '▶️' },
+  ];
+
+  // ===== สร้าง Photo Grid =====
+  function buildPhotoGrid() {
+    const grid = document.getElementById('photoGrid');
+    grid.innerHTML = PHOTO_SLOTS.map(slot => `
+      <label class="photo-slot" id="slot_${slot.id}" for="input_${slot.id}">
+        <div class="photo-slot-icon">${slot.icon}</div>
+        <div class="photo-slot-label">${slot.label}</div>
+        <div class="photo-slot-overlay" style="color:white;font-size:14px;font-weight:600">🔄 เปลี่ยนรูป</div>
+        <input type="file" class="photo-input" id="input_${slot.id}" accept="image/*"
+          onchange="handlePhoto('${slot.id}', this)">
+      </label>
+    `).join('');
+  }
+
+  function handlePhoto(slotId, input) {
+    const file = input.files[0];
+    if (!file) return;
+    photoFiles[slotId] = file;
+    const slot = document.getElementById(`slot_${slotId}`);
+    const reader = new FileReader();
+    reader.onload = e => {
+      slot.classList.add('has-photo');
+      const existing = slot.querySelector('img');
+      if (existing) existing.remove();
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      slot.insertBefore(img, slot.firstChild);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ===== สร้าง Condition List =====
+  function buildConditionList() {
+    const container = document.getElementById('conditionList');
+    const sections = [
+      { title: '🦷 ปัญหาการจัดเรียงฟัน (Orthodontic)', data: DENTAL_DATA.orthodontic },
+      { title: '⚕️ ปัญหาทั่วไปที่ต้องรักษาก่อน', data: DENTAL_DATA.general },
+      { title: '✨ งานความสวยงาม (Cosmetic)', data: DENTAL_DATA.cosmetic }
+    ];
+
+    container.innerHTML = sections.map(s => `
+      <div class="condition-section">
+        <div class="condition-section-title">${s.title}</div>
+        <div class="condition-grid">
+          ${s.data.map(c => `
+            <div class="condition-item" id="cond_${c.id}" onclick="toggleCondition('${c.id}')">
+              <input type="checkbox" id="check_${c.id}">
+              <div class="condition-check" id="checkmark_${c.id}">✓</div>
+              <div>
+                <div class="condition-name">${c.icon} ${c.name}</div>
+                <div class="condition-desc">${c.description.substring(0, 80)}...</div>
+                ${c.aligner_suitable ? '<span class="badge badge-success" style="margin-top:4px;font-size:11px">Clear Aligner ✅</span>' : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleCondition(id) {
+    if (selectedConditions.has(id)) {
+      selectedConditions.delete(id);
+      document.getElementById(`cond_${id}`).classList.remove('selected');
+    } else {
+      selectedConditions.add(id);
+      document.getElementById(`cond_${id}`).classList.add('selected');
+    }
+    document.getElementById('selectedCount').textContent = `เลือกแล้ว: ${selectedConditions.size} ข้อ`;
+  }
+
+  // ===== Step Navigation =====
+  function goStep(n) {
+    if (n === 2 && !document.getElementById('patientName').value.trim()) {
+      showToast('กรุณากรอกชื่อลูกค้าก่อน', 'error'); return;
+    }
+
+    document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.step').forEach((el, i) => {
+      el.classList.remove('active', 'done');
+      if (i + 1 < n) el.classList.add('done');
+      if (i + 1 === n) el.classList.add('active');
+    });
+    document.getElementById(`step${n}`).classList.add('active');
+    currentStep = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function generateAndGoStep4() {
+    const name = document.getElementById('patientName').value.trim() || 'ลูกค้า';
+    generatedReport = generateAssessmentReport(name, [...selectedConditions]);
+    renderReport();
+    goStep(4);
+  }
+
+  function renderReport() {
+    const { report, alignerSuitable, preRequired } = generatedReport;
+
+    document.getElementById('reportBox').textContent = report;
+
+    document.getElementById('alignerResult').innerHTML = alignerSuitable
+      ? '<span class="aligner-badge yes">✅ เหมาะสำหรับจัดฟันใส (Clear Aligner)</span>'
+      : '<span class="aligner-badge no">⚠️ ต้องประเมินเพิ่มเติม หรือรักษาก่อน</span>';
+
+    const warns = document.getElementById('preWarnings');
+    warns.innerHTML = preRequired.length > 0
+      ? preRequired.map(w => `<div class="alert alert-warning">${w}</div>`).join('')
+      : '';
+
+    // Thumbnails
+    const thumbs = document.getElementById('photoThumbs');
+    thumbs.innerHTML = Object.entries(photoFiles).map(([id, file]) => {
+      const slot = PHOTO_SLOTS.find(s => s.id === id);
+      const url = URL.createObjectURL(file);
+      return `<div style="text-align:center">
+        <img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--border)">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${slot?.icon || ''} ${slot?.label.split('\n')[0] || ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ===== บันทึก =====
+  async function saveAssessment() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    showLoading('กำลังบันทึกข้อมูล...');
+
+    try {
+      // 1. บันทึก/ค้นหาผู้ป่วย
+      const patientData = {
+        name:   document.getElementById('patientName').value.trim(),
+        age:    parseInt(document.getElementById('patientAge').value) || null,
+        gender: document.getElementById('patientGender').value || null,
+        phone:  document.getElementById('patientPhone').value.trim() || null,
+        email:  document.getElementById('patientEmail').value.trim() || null,
+        notes:  document.getElementById('patientNotes').value.trim() || null,
+      };
+      const patient = await Patients.create(patientData);
+
+      // 2. อัปโหลดรูปภาพ
+      showLoading('กำลังอัปโหลดรูปภาพ...');
+      const photoUrls = {};
+      for (const [slotId, file] of Object.entries(photoFiles)) {
+        try {
+          const path = `${patient.id}/${Date.now()}_${slotId}.jpg`;
+          const url = await Storage.upload(file, path);
+          photoUrls[slotId] = url;
+        } catch(e) {
+          console.warn('Photo upload failed:', slotId, e);
+        }
+      }
+
+      // 3. บันทึกการประเมิน
+      showLoading('กำลังบันทึกรายงาน...');
+      const dentistNotes = document.getElementById('dentistNotes').value.trim();
+      const allConds = [...DENTAL_DATA.orthodontic, ...DENTAL_DATA.general, ...DENTAL_DATA.cosmetic];
+      const selectedObjs = [...selectedConditions].map(id => allConds.find(c => c.id === id)).filter(Boolean);
+      const treatments = selectedObjs.flatMap(c => c.treatments.map(t => t.name));
+
+      const assessment = {
+        patient_id: patient.id,
+        photo_front_closed: photoUrls['front_closed'] || null,
+        photo_front_open:   photoUrls['front_open'] || null,
+        photo_left:         photoUrls['left'] || null,
+        photo_right:        photoUrls['right'] || null,
+        photo_top:          photoUrls['top'] || null,
+        photo_bottom:       photoUrls['bottom'] || null,
+        conditions:         [...selectedConditions],
+        treatment_plan:     treatments,
+        report_text:        generatedReport.report,
+        aligner_suitable:   generatedReport.alignerSuitable,
+        dentist_notes:      dentistNotes || null,
+      };
+
+      await Assessments.create(assessment);
+
+      hideLoading();
+      showToast('บันทึกเรียบร้อยแล้ว! 🎉', 'success');
+
+      setTimeout(() => {
+        window.location.href = `patient-detail.html?id=${patient.id}`;
+      }, 1500);
+
+    } catch(err) {
+      hideLoading();
+      btn.disabled = false;
+      console.error(err);
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    }
+  }
+
+  function printReport() {
+    const notes = document.getElementById('dentistNotes').value;
+    if (notes) {
+      const fullReport = generatedReport.report + `\nหมายเหตุ: ${notes}`;
+      document.getElementById('reportBox').textContent = fullReport;
+    }
+    window.print();
+  }
+
+  // ===== UI Helpers =====
+  function showLoading(text) {
+    document.getElementById('loadingText').textContent = text;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+  }
+  function hideLoading() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
+  function showToast(msg, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  }
+
+  // ===== Init =====
+  buildPhotoGrid();
+  buildConditionList();
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ข้อมูลลูกค้า - Dr. Clear Aligner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">
+    <div class="navbar-logo">🦷</div>
+    <div>
+      <div class="navbar-title">Dr. Clear Aligner</div>
+      <div class="navbar-subtitle">ข้อมูลลูกค้า</div>
+    </div>
+  </a>
+  <div class="navbar-nav">
+    <a href="index.html" class="nav-link">🏠 หน้าหลัก</a>
+    <a href="assessment.html" class="nav-link">➕ ประเมินฟัน</a>
+    <a href="patients.html" class="nav-link active">👥 ลูกค้า</a>
+    <a href="knowledge.html" class="nav-link">📚 ฐานความรู้</a>
+  </div>
+</nav>
+
+<div class="container-sm">
+  <div class="page-header">
+    <div>
+      <div class="page-title" id="patientNameTitle">กำลังโหลด...</div>
+      <div class="page-subtitle" id="patientMeta"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="patients.html" class="btn btn-outline btn-sm">← รายชื่อ</a>
+      <button class="btn btn-primary btn-sm" id="newAssessBtn">➕ ประเมินใหม่</button>
+    </div>
+  </div>
+
+  <!-- Patient Info -->
+  <div class="card" style="margin-bottom:16px" id="patientCard">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Assessment History -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📋 ประวัติการประเมิน</div>
+    </div>
+    <div id="historyContent"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/dental-data.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const patientId = params.get('id');
+
+  if (!patientId) location.href = 'patients.html';
+
+  document.getElementById('newAssessBtn').href = `assessment.html?patient_id=${patientId}`;
+
+  async function load() {
+    try {
+      const patient = await Patients.getById(patientId);
+
+      document.getElementById('patientNameTitle').textContent = patient.name;
+      document.getElementById('patientMeta').textContent =
+        [patient.age ? patient.age + ' ปี' : null, patient.gender, patient.phone].filter(Boolean).join(' · ');
+      document.getElementById('newAssessBtn').onclick = () => {
+        location.href = `assessment.html?patient_id=${patientId}`;
+      };
+
+      document.getElementById('patientCard').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+          ${[
+            ['👤 ชื่อ', patient.name],
+            ['🎂 อายุ', patient.age ? patient.age + ' ปี' : '—'],
+            ['⚧ เพศ', patient.gender || '—'],
+            ['📱 เบอร์', patient.phone || '—'],
+            ['📧 อีเมล', patient.email || '—'],
+            ['📅 วันที่เพิ่ม', new Date(patient.created_at).toLocaleDateString('th-TH')],
+          ].map(([l, v]) => `
+            <div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">${l}</div>
+              <div style="font-weight:600">${v}</div>
+            </div>
+          `).join('')}
+        </div>
+        ${patient.notes ? `<div style="margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;font-size:14px">${patient.notes}</div>` : ''}
+      `;
+
+      // Assessments
+      const assessments = patient.assessments || [];
+      const hc = document.getElementById('historyContent');
+
+      if (assessments.length === 0) {
+        hc.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted)">
+          <div style="font-size:36px;margin-bottom:8px">📋</div>
+          <div>ยังไม่มีประวัติการประเมิน</div>
+          <a href="assessment.html?patient_id=${patientId}" class="btn btn-primary" style="margin-top:12px">➕ ประเมินครั้งแรก</a>
+        </div>`;
+        return;
+      }
+
+      hc.innerHTML = assessments
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .map((a, idx) => {
+          const photos = [a.photo_front_closed, a.photo_front_open, a.photo_left, a.photo_right, a.photo_top, a.photo_bottom].filter(Boolean);
+          const conditions = Array.isArray(a.conditions) ? a.conditions : [];
+          return `
+          <div style="border:2px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div>
+                <strong>การประเมินครั้งที่ ${assessments.length - idx}</strong>
+                <span style="font-size:13px;color:var(--text-muted);margin-left:8px">${new Date(a.created_at).toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'})}</span>
+              </div>
+              ${a.aligner_suitable
+                ? '<span class="badge badge-success">✅ เหมาะกับ Clear Aligner</span>'
+                : '<span class="badge badge-warning">⚠️ ต้องประเมินเพิ่ม</span>'}
+            </div>
+
+            ${photos.length ? `
+              <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+                ${photos.map(url => `<img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">`).join('')}
+              </div>` : ''}
+
+            ${conditions.length ? `
+              <div style="margin-bottom:10px">
+                <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px">ปัญหาที่พบ:</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  ${conditions.map(c => `<span class="badge badge-info">${c}</span>`).join('')}
+                </div>
+              </div>` : ''}
+
+            ${a.dentist_notes ? `
+              <div style="background:var(--bg);padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px">
+                <strong>หมายเหตุ:</strong> ${a.dentist_notes}
+              </div>` : ''}
+
+            <button class="btn btn-outline btn-sm" onclick="showReport('${a.id}')">📄 ดูรายงาน</button>
+            <button class="btn btn-outline btn-sm" onclick="printReport(${idx})">🖨️ พิมพ์</button>
+          </div>
+          <div id="report_${a.id}" style="display:none;margin-bottom:12px" data-report="${encodeURIComponent(a.report_text || '')}"></div>
+        `}).join('');
+
+    } catch(err) {
+      console.error(err);
+      document.getElementById('patientCard').innerHTML = `<div class="alert alert-danger">โหลดข้อมูลไม่สำเร็จ: ${err.message}</div>`;
+    }
+  }
+
+  function showReport(id) {
+    const el = document.getElementById(`report_${id}`);
+    if (el.style.display === 'none') {
+      const text = decodeURIComponent(el.dataset.report);
+      el.innerHTML = `<div class="report-box">${text || 'ไม่มีรายงาน'}</div>`;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>

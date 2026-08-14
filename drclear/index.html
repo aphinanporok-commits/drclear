@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr. Clear Aligner - ระบบประเมินฟัน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">
+    <div class="navbar-logo">🦷</div>
+    <div>
+      <div class="navbar-title">Dr. Clear Aligner</div>
+      <div class="navbar-subtitle">ระบบประเมินฟันลูกค้า</div>
+    </div>
+  </a>
+  <div class="navbar-nav">
+    <a href="index.html" class="nav-link active">🏠 หน้าหลัก</a>
+    <a href="assessment.html" class="nav-link">➕ ประเมินฟัน</a>
+    <a href="patients.html" class="nav-link">👥 ลูกค้า</a>
+    <a href="knowledge.html" class="nav-link">📚 ฐานความรู้</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="container">
+
+  <!-- Page Header -->
+  <div class="page-header" style="margin-top:8px">
+    <div>
+      <div class="page-title">ยินดีต้อนรับ 👋</div>
+      <div class="page-subtitle" id="todayDate"></div>
+    </div>
+    <a href="assessment.html" class="btn btn-primary btn-lg">
+      ➕ ประเมินฟันใหม่
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div>
+        <div class="stat-value" id="statPatients">—</div>
+        <div class="stat-label">ลูกค้าทั้งหมด</div>
+      </div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">📋</div>
+      <div>
+        <div class="stat-value" id="statTotal">—</div>
+        <div class="stat-label">การประเมินทั้งหมด</div>
+      </div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-icon">📅</div>
+      <div>
+        <div class="stat-value" id="statToday">—</div>
+        <div class="stat-label">ประเมินวันนี้</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📚</div>
+      <div>
+        <div class="stat-value" id="statKnowledge">—</div>
+        <div class="stat-label">ไฟล์ความรู้</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Assessments -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🕐 การประเมินล่าสุด</div>
+      <a href="patients.html" class="btn btn-outline btn-sm">ดูทั้งหมด →</a>
+    </div>
+
+    <div id="recentLoading" style="text-align:center;padding:20px;color:var(--text-muted)">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="recentEmpty" style="display:none;text-align:center;padding:40px;color:var(--text-muted)">
+      <div style="font-size:48px;margin-bottom:12px">🦷</div>
+      <div style="font-size:16px;font-weight:600">ยังไม่มีข้อมูลการประเมิน</div>
+      <div style="font-size:14px;margin-top:6px">กดปุ่ม "ประเมินฟันใหม่" เพื่อเริ่มต้น</div>
+      <a href="assessment.html" class="btn btn-primary" style="margin-top:16px">➕ เริ่มประเมิน</a>
+    </div>
+
+    <div class="table-wrap" id="recentTable" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>ชื่อลูกค้า</th>
+            <th>เบอร์โทร</th>
+            <th>ปัญหาที่พบ</th>
+            <th>Clear Aligner</th>
+            <th>วันที่</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="recentBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick Guide -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">
+    <div class="card" style="border-top:4px solid var(--primary)">
+      <div style="font-size:32px;margin-bottom:10px">📸</div>
+      <div style="font-weight:700;margin-bottom:6px">1. ถ่ายรูปฟัน 6 มุม</div>
+      <div style="font-size:13px;color:var(--text-muted)">หน้า-หน้า (ปิด/เปิด), ซ้าย, ขวา, บน, ล่าง</div>
+    </div>
+    <div class="card" style="border-top:4px solid var(--accent)">
+      <div style="font-size:32px;margin-bottom:10px">✅</div>
+      <div style="font-weight:700;margin-bottom:6px">2. เลือกปัญหาที่พบ</div>
+      <div style="font-size:13px;color:var(--text-muted)">ติ๊ก Checklist ปัญหาฟันที่เห็นจากรูป</div>
+    </div>
+    <div class="card" style="border-top:4px solid var(--success)">
+      <div style="font-size:32px;margin-bottom:10px">📊</div>
+      <div style="font-weight:700;margin-bottom:6px">3. รายงานอัตโนมัติ</div>
+      <div style="font-size:13px;color:var(--text-muted)">ระบบสร้างรายงานและแผนรักษาให้ทันที</div>
+    </div>
+    <div class="card" style="border-top:4px solid var(--warning)">
+      <div style="font-size:32px;margin-bottom:10px">📄</div>
+      <div style="font-weight:700;margin-bottom:6px">4. Export PDF</div>
+      <div style="font-size:13px;color:var(--text-muted)">พิมพ์หรือส่งรายงานให้ลูกค้าได้เลย</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/dental-data.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+  // ตั้งวันที่
+  document.getElementById('todayDate').textContent =
+    new Date().toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  // โหลดสถิติ
+  async function loadDashboard() {
+    try {
+      const [patientCount, assessStats] = await Promise.all([
+        Patients.getStats(),
+        Assessments.getStats()
+      ]);
+      const kbFiles = await KnowledgeFiles.getAll();
+
+      document.getElementById('statPatients').textContent  = patientCount || 0;
+      document.getElementById('statTotal').textContent     = assessStats.total || 0;
+      document.getElementById('statToday').textContent     = assessStats.today || 0;
+      document.getElementById('statKnowledge').textContent = kbFiles.length || 0;
+
+      // โหลดการประเมินล่าสุด
+      const recent = await Assessments.getRecent(10);
+      document.getElementById('recentLoading').style.display = 'none';
+
+      if (!recent || recent.length === 0) {
+        document.getElementById('recentEmpty').style.display = 'block';
+      } else {
+        document.getElementById('recentTable').style.display = 'block';
+        const tbody = document.getElementById('recentBody');
+        tbody.innerHTML = recent.map(a => {
+          const conditions = Array.isArray(a.conditions) ? a.conditions : [];
+          const date = new Date(a.created_at).toLocaleDateString('th-TH');
+          return `<tr>
+            <td><strong>${a.patients?.name || '—'}</strong></td>
+            <td>${a.patients?.phone || '—'}</td>
+            <td>${conditions.slice(0,2).join(', ')}${conditions.length > 2 ? ` +${conditions.length-2}` : ''}</td>
+            <td>${a.aligner_suitable
+              ? '<span class="badge badge-success">✅ เหมาะสม</span>'
+              : '<span class="badge badge-warning">⚠️ ต้องประเมิน</span>'}</td>
+            <td>${date}</td>
+            <td><a href="patient-detail.html?id=${a.patient_id}" class="btn btn-outline btn-sm">ดูรายละเอียด</a></td>
+          </tr>`;
+        }).join('');
+      }
+    } catch(err) {
+      document.getElementById('recentLoading').style.display = 'none';
+      document.getElementById('recentEmpty').style.display = 'block';
+      console.error('Dashboard error:', err);
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

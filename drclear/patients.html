@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายชื่อลูกค้า - Dr. Clear Aligner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">
+    <div class="navbar-logo">🦷</div>
+    <div>
+      <div class="navbar-title">Dr. Clear Aligner</div>
+      <div class="navbar-subtitle">ระบบประเมินฟันลูกค้า</div>
+    </div>
+  </a>
+  <div class="navbar-nav">
+    <a href="index.html" class="nav-link">🏠 หน้าหลัก</a>
+    <a href="assessment.html" class="nav-link">➕ ประเมินฟัน</a>
+    <a href="patients.html" class="nav-link active">👥 ลูกค้า</a>
+    <a href="knowledge.html" class="nav-link">📚 ฐานความรู้</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">👥 รายชื่อลูกค้า</div>
+      <div class="page-subtitle" id="patientCount">กำลังโหลด...</div>
+    </div>
+    <a href="assessment.html" class="btn btn-primary">➕ ประเมินใหม่</a>
+  </div>
+
+  <!-- Search -->
+  <div class="card" style="margin-bottom:16px;padding:16px">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="form-control" id="searchInput"
+        placeholder="ค้นหาชื่อหรือเบอร์โทร..."
+        oninput="searchPatients(this.value)">
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div id="loadingState" style="text-align:center;padding:40px">
+      <div class="spinner"></div>
+    </div>
+    <div id="emptyState" style="display:none;text-align:center;padding:40px;color:var(--text-muted)">
+      <div style="font-size:48px;margin-bottom:12px">👥</div>
+      <div style="font-size:16px;font-weight:600">ไม่พบข้อมูลลูกค้า</div>
+      <a href="assessment.html" class="btn btn-primary" style="margin-top:16px">➕ เพิ่มลูกค้าใหม่</a>
+    </div>
+    <div class="table-wrap" id="tableWrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ชื่อ-นามสกุล</th>
+            <th>อายุ / เพศ</th>
+            <th>เบอร์โทร</th>
+            <th>วันที่เพิ่ม</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="patientBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/dental-data.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+  let allPatients = [];
+
+  async function loadPatients() {
+    try {
+      allPatients = await Patients.getAll();
+      document.getElementById('loadingState').style.display = 'none';
+      renderTable(allPatients);
+    } catch(err) {
+      console.error(err);
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+    }
+  }
+
+  function renderTable(patients) {
+    document.getElementById('patientCount').textContent = `ลูกค้าทั้งหมด ${patients.length} คน`;
+    if (patients.length === 0) {
+      document.getElementById('tableWrap').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+      return;
+    }
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'block';
+    document.getElementById('patientBody').innerHTML = patients.map((p, i) => `
+      <tr>
+        <td style="color:var(--text-muted)">${i+1}</td>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.age ? p.age + ' ปี' : '—'} ${p.gender ? '/ ' + p.gender : ''}</td>
+        <td>${p.phone || '—'}</td>
+        <td>${new Date(p.created_at).toLocaleDateString('th-TH')}</td>
+        <td style="display:flex;gap:6px">
+          <a href="patient-detail.html?id=${p.id}" class="btn btn-outline btn-sm">📋 ดูรายละเอียด</a>
+          <a href="assessment.html?patient_id=${p.id}" class="btn btn-primary btn-sm">➕ ประเมินใหม่</a>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  let searchTimer;
+  async function searchPatients(q) {
+    clearTimeout(searchTimer);
+    if (!q.trim()) { renderTable(allPatients); return; }
+    searchTimer = setTimeout(async () => {
+      try {
+        const results = await Patients.search(q);
+        renderTable(results);
+      } catch(e) {
+        console.error(e);
+      }
+    }, 300);
+  }
+
+  loadPatients();
+</script>
+</body>
+</html>
