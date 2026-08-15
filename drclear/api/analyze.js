@@ -78,9 +78,9 @@ Be conservative — only flag conditions you can clearly see. If image quality i
   };
 
   try {
-    // Use gemini-2.0-flash-lite — free tier, fast, supports vision
+    // Use gemini-1.5-flash — free tier, fast, supports vision
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,7 +99,7 @@ Be conservative — only flag conditions you can clearly see. If image quality i
     if (!geminiResponse.ok) {
       const errText = await geminiResponse.text();
       console.error('Gemini API error:', errText);
-      return res.status(502).json({ error: 'AI service error. Please try again.' });
+      return res.status(502).json({ error: 'AI service error: ' + errText.slice(0, 200) });
     }
 
     const result = await geminiResponse.json();
