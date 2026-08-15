@@ -1,11 +1,19 @@
 // ===================================================
-// Dr. Clear Aligner - ฐานข้อมูลความรู้ทางทันตกรรม
-// ดึงมาจากเอกสาร DentalKnowledge (แปลเป็นไทย)
+// Dr. Clear Aligner - Dental Knowledge Base
+// Extracted from DentalKnowledge reference document.
+// UI labels are in Thai; all code logic is in English.
 // ===================================================
 
+/**
+ * DENTAL_DATA — structured knowledge base for dental conditions.
+ * Organised into three categories:
+ *   - orthodontic : alignment & bite issues suitable for Clear Aligner
+ *   - general     : conditions requiring pre-treatment before orthodontics
+ *   - cosmetic    : aesthetic treatments
+ */
 const DENTAL_DATA = {
 
-  // ========== ปัญหาการจัดเรียงฟัน (Orthodontic) ==========
+  // ── Orthodontic Conditions ──────────────────────────
   orthodontic: [
     {
       id: 'crowding',
@@ -144,7 +152,7 @@ const DENTAL_DATA = {
     }
   ],
 
-  // ========== ปัญหาทั่วไปที่ต้องรักษาก่อน ==========
+  // ── General / Pre-treatment Conditions ─────────────
   general: [
     {
       id: 'tooth_decay_mild',
@@ -214,7 +222,7 @@ const DENTAL_DATA = {
     }
   ],
 
-  // ========== งานความสวยงาม ==========
+  // ── Cosmetic Treatments ─────────────────────────────
   cosmetic: [
     {
       id: 'veneer_candidate',
@@ -253,7 +261,16 @@ const DENTAL_DATA = {
   ]
 };
 
-// ========== ตัวช่วยสร้างรายงาน ==========
+// ── Report Generator ────────────────────────────────
+
+/**
+ * Generate a Thai-language assessment report from selected condition IDs.
+ *
+ * @param {string}   patientName         - Patient's full name.
+ * @param {string[]} selectedConditionIds - Array of condition IDs from DENTAL_DATA.
+ * @param {string}   [dentistNotes='']   - Optional free-text notes from the dentist.
+ * @returns {{ report: string, alignerSuitable: boolean, treatments: object[], preRequired: string[] }}
+ */
 function generateAssessmentReport(patientName, selectedConditionIds, dentistNotes = '') {
   const allConditions = [
     ...DENTAL_DATA.orthodontic,
@@ -261,16 +278,20 @@ function generateAssessmentReport(patientName, selectedConditionIds, dentistNote
     ...DENTAL_DATA.cosmetic
   ];
 
-  const selected = selectedConditionIds.map(id => allConditions.find(c => c.id === id)).filter(Boolean);
-  const orthodonticSelected = selected.filter(c => DENTAL_DATA.orthodontic.find(d => d.id === c.id));
-  const generalSelected = selected.filter(c => DENTAL_DATA.general.find(d => d.id === c.id));
-  const cosmeticSelected = selected.filter(c => DENTAL_DATA.cosmetic.find(d => d.id === c.id));
-  const preRequired = selected.filter(c => c.pre_treatment_required);
+  const selected      = selectedConditionIds.map(id => allConditions.find(c => c.id === id)).filter(Boolean);
+  const orthodontic   = selected.filter(c => DENTAL_DATA.orthodontic.find(d => d.id === c.id));
+  const cosmetic      = selected.filter(c => DENTAL_DATA.cosmetic.find(d => d.id === c.id));
+  const preRequired   = selected.filter(c => c.pre_treatment_required);
 
-  const alignerSuitable = orthodonticSelected.length > 0 && preRequired.length === 0;
+  // Patient is suitable for Clear Aligner only when there are orthodontic issues
+  // and no conditions requiring pre-treatment.
+  const alignerSuitable = orthodontic.length > 0 && preRequired.length === 0;
 
-  const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString('th-TH', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
 
+  // ── Build report text ──
   let report = `รายงานการประเมินสภาวะฟัน\n`;
   report += `${'='.repeat(40)}\n`;
   report += `ชื่อผู้ป่วย: ${patientName}\n`;
@@ -283,9 +304,8 @@ function generateAssessmentReport(patientName, selectedConditionIds, dentistNote
     return { report, alignerSuitable: false, treatments: [], preRequired: [] };
   }
 
-  // ส่วนที่ 1: ปัญหาที่พบ
-  report += `📋 ปัญหาที่พบ\n`;
-  report += `${'─'.repeat(30)}\n`;
+  // Section 1 — Conditions found
+  report += `📋 ปัญหาที่พบ\n${'─'.repeat(30)}\n`;
   selected.forEach((c, i) => {
     report += `${i + 1}. ${c.name}\n`;
     report += `   ${c.description}\n`;
@@ -293,23 +313,21 @@ function generateAssessmentReport(patientName, selectedConditionIds, dentistNote
     report += '\n';
   });
 
-  // ส่วนที่ 2: สรุปก่อนรักษา
+  // Section 2 — Pre-treatment requirements
   if (preRequired.length > 0) {
-    report += `⚠️ สิ่งที่ต้องรักษาก่อนจัดฟัน\n`;
-    report += `${'─'.repeat(30)}\n`;
+    report += `⚠️ สิ่งที่ต้องรักษาก่อนจัดฟัน\n${'─'.repeat(30)}\n`;
     preRequired.forEach(c => {
       report += `• ${c.name}: ${c.treatments[0].name}\n`;
     });
     report += '\n';
   }
 
-  // ส่วนที่ 3: แผนการจัดฟัน
-  if (orthodonticSelected.length > 0) {
-    report += `🦷 แผนการจัดฟัน\n`;
-    report += `${'─'.repeat(30)}\n`;
+  // Section 3 — Orthodontic plan
+  if (orthodontic.length > 0) {
+    report += `🦷 แผนการจัดฟัน\n${'─'.repeat(30)}\n`;
     if (alignerSuitable) {
       report += `✅ เหมาะสมกับการจัดฟันใส (Clear Aligner)\n\n`;
-      orthodonticSelected.forEach(c => {
+      orthodontic.forEach(c => {
         report += `• ${c.name}\n`;
         report += `  แนวทาง: ${c.treatments.map(t => t.name).join(', ')}\n`;
         report += `  ระยะเวลาโดยประมาณ: ${c.duration_estimate}\n\n`;
@@ -319,20 +337,18 @@ function generateAssessmentReport(patientName, selectedConditionIds, dentistNote
     }
   }
 
-  // ส่วนที่ 4: งานความสวยงาม
-  if (cosmeticSelected.length > 0) {
-    report += `✨ งานความสวยงาม\n`;
-    report += `${'─'.repeat(30)}\n`;
-    cosmeticSelected.forEach(c => {
+  // Section 4 — Cosmetic treatments
+  if (cosmetic.length > 0) {
+    report += `✨ งานความสวยงาม\n${'─'.repeat(30)}\n`;
+    cosmetic.forEach(c => {
       report += `• ${c.name}: ${c.treatments.map(t => t.name).join(', ')}\n`;
     });
     report += '\n';
   }
 
-  // หมายเหตุทันตแพทย์
+  // Section 5 — Dentist notes
   if (dentistNotes) {
-    report += `📝 หมายเหตุจากทันตแพทย์\n`;
-    report += `${'─'.repeat(30)}\n`;
+    report += `📝 หมายเหตุจากทันตแพทย์\n${'─'.repeat(30)}\n`;
     report += `${dentistNotes}\n\n`;
   }
 
@@ -340,12 +356,10 @@ function generateAssessmentReport(patientName, selectedConditionIds, dentistNote
   report += `** รายงานนี้จัดทำโดย ${CLINIC_NAME} **\n`;
   report += `** ข้อมูลนี้ใช้เพื่อประกอบการตัดสินใจเท่านั้น **\n`;
 
-  const allTreatments = selected.flatMap(c => c.treatments);
-
   return {
     report,
     alignerSuitable,
-    treatments: allTreatments,
+    treatments: selected.flatMap(c => c.treatments),
     preRequired: preRequired.map(c => c.pre_treatment_note)
   };
 }
