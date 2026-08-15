@@ -59,34 +59,45 @@ export default async function handler(req, res) {
 
 หมายเหตุ: นี่เป็นการคัดกรองเบื้องต้น ไม่ใช่การวินิจฉัย — ให้ระบุทุกอย่างที่มองเห็นได้`;
 
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
   try {
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [...imageParts, { text: prompt }] }],
-          generationConfig: { maxOutputTokens: 300, temperature: 0.4 }
-        })
-      }
-    );
+    const payload = JSON.stringify({
+      contents: [{ parts: [...imageParts, { text: prompt }] }],
+      generationConfig: { maxOutputTokens: 4096, temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } }
+    });
+
+    // Retry up to 3 times on 503 / 429 (high demand / rate limit)
+    let geminiResponse, errText;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload }
+      );
+      if (geminiResponse.ok) break;
+      errText = await geminiResponse.text();
+      const status = geminiResponse.status;
+      if ((status === 503 || status === 429) && attempt < 3) {
+        console.warn(`Gemini ${status} on attempt ${attempt}, retrying in ${attempt * 3}s...`);
+        await sleep(attempt * 3000);
+      } else break;
+    }
 
     if (!geminiResponse.ok) {
-      const errText = await geminiResponse.text();
       console.error('Gemini API error:', errText);
-      return res.status(502).json({ error: 'AI service error: ' + errText.slice(0, 200) });
+      return res.status(502).json({ error: 'AI service error: ' + (errText || '').slice(0, 200) });
     }
 
     const result = await geminiResponse.json();
     const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
     console.log('Gemini raw response:', rawText);
 
-    // Extract JSON from response (handle markdown code blocks too)
-    const jsonMatch = rawText.match(/\{[\s\S]*?\}/);
+    // Extract JSON — strip markdown code blocks, use greedy match
+    const stripped = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);  // greedy
     let parsed = { detected: [], confidence: 'low', notes: '' };
     if (jsonMatch) {
-      try { parsed = JSON.parse(jsonMatch[0]); } catch(e) { console.error('JSON parse error:', e); }
+      try { parsed = JSON.parse(jsonMatch[0]); } catch(e) { console.error('JSON parse error:', e, jsonMatch[0]); }
     }
 
     return res.status(200).json({

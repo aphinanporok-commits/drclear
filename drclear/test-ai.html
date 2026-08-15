@@ -1,38 +1,123 @@
-// ===================================================
-// Dr. Clear Aligner - AI Dental Photo Screening
-// Vercel Serverless Function → Google Gemini API (free)
-// Set GEMINI_API_KEY in Vercel Environment Variables.
-// ===================================================
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 ทดสอบ AI วิเคราะห์ฟัน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #F0F7FF; padding: 24px; color: #1A2B3C; }
+    h1 { color: #1B6FA8; margin-bottom: 4px; }
+    .sub { color: #5E7A8E; font-size: 14px; margin-bottom: 24px; }
+    .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(27,111,168,0.12); margin-bottom: 16px; }
+    label { font-weight: 600; font-size: 13px; color: #5E7A8E; display: block; margin-bottom: 6px; text-transform: uppercase; }
+    input[type=text], input[type=file] { width: 100%; padding: 10px 14px; border: 2px solid #C8DFF0; border-radius: 8px; font-size: 15px; font-family: 'Sarabun', sans-serif; }
+    input:focus { outline: none; border-color: #1B6FA8; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #1B6FA8; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif; width: 100%; justify-content: center; margin-top: 8px; }
+    .btn:hover { background: #145480; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* Photo Grid */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+    .photo-slot {
+      position: relative; aspect-ratio: 4/3; border-radius: 10px;
+      border: 2px dashed #C8DFF0; background: #F0F7FF;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; overflow: hidden; transition: border-color 0.2s;
+      text-align: center;
+    }
+    .photo-slot:hover { border-color: #1B6FA8; background: #E3F0FA; }
+    .photo-slot.has-photo { border: 2px solid #1B6FA8; }
+    .photo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+    .photo-slot-icon { font-size: 28px; line-height: 1; }
+    .photo-slot-name { font-size: 12px; font-weight: 700; color: #1B6FA8; margin-top: 4px; }
+    .photo-slot-sub  { font-size: 11px; color: #5E7A8E; margin-top: 2px; white-space: pre-line; line-height: 1.3; }
+    .photo-slot-overlay {
+      position: absolute; inset: 0; background: rgba(27,111,168,0.7);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: 700; color: white;
+    }
+    .photo-slot.has-photo:hover .photo-slot-overlay { opacity: 1; }
+    .photo-input { display: none; }
+    pre { background: #F8FAFF; border: 2px solid #C8DFF0; border-radius: 8px; padding: 16px; font-size: 13px; overflow-x: auto; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+    .badge-success { background: #D5F5E3; color: #27AE60; }
+    .badge-warning { background: #FEF9E7; color: #F39C12; }
+    .badge-danger  { background: #FDECEA; color: #E74C3C; }
+    .result-box { background: #EBF5FF; border: 2px solid #1B6FA8; border-radius: 10px; padding: 16px; }
+    .condition-tag { display: inline-block; background: #1B6FA8; color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; margin: 3px; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-line { padding: 10px 14px; border-radius: 8px; font-size: 14px; margin-top: 8px; }
+    .status-ok { background: #D5F5E3; color: #27AE60; }
+    .status-err { background: #FDECEA; color: #E74C3C; }
+    .status-info { background: #D6EAF8; color: #1B6FA8; }
+  </style>
+</head>
+<body>
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+<h1>🧪 ทดสอบ AI วิเคราะห์ฟัน</h1>
+<p class="sub">เครื่องมือทดสอบ prompt โดยตรงกับ Gemini API — ไม่ต้อง deploy</p>
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+<!-- API Key -->
+<div class="card">
+  <label>🔑 Gemini API Key</label>
+  <input type="text" id="apiKey" placeholder="ใส่ API Key ของคุณ"
+    value="AQ.Ab8RN6Lxejl2EiYETcTDMUHZ5lmw2tqfhH778odjRZRL-9QzEw">
+  <div id="keyStatus" class="status-line status-info" style="display:none"></div>
+</div>
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY not configured.' });
-  }
+<!-- Upload Images -->
+<div class="card">
+  <label>📸 รูปถ่ายฟัน — คลิกช่องเพื่ออัปโหลด (สูงสุด 6 รูป, บีบขนาดอัตโนมัติก่อนส่ง AI)</label>
+  <div class="photo-grid" id="photoGrid"></div>
+</div>
 
-  const { images, knowledgeContext } = req.body;
-  if (!images || images.length === 0) {
-    return res.status(400).json({ error: 'No images provided.' });
-  }
+<!-- Test Button -->
+<div class="card">
+  <button class="btn" id="testBtn" onclick="runTest()">🔍 ทดสอบ AI วิเคราะห์</button>
+  <div id="statusMsg" class="status-line" style="display:none"></div>
+</div>
 
-  const imageParts = images.map(img => ({
-    inlineData: { mimeType: img.mediaType || 'image/jpeg', data: img.data }
-  }));
+<!-- Result -->
+<div class="card" id="resultCard" style="display:none">
+  <label>📊 ผลการวิเคราะห์</label>
 
-  const knowledgeSection = knowledgeContext
-    ? `\nข้อมูลเพิ่มเติมจากคลินิก:\n${knowledgeContext}\n`
-    : '';
+  <div class="result-box" style="margin-top:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <strong>ปัญหาที่พบ:</strong>
+      <span id="confidenceBadge" class="badge"></span>
+    </div>
+    <div id="detectedTags" style="margin-bottom:10px"></div>
+    <div id="notesText" style="font-size:14px;color:#5E7A8E"></div>
+  </div>
 
-  // Simple, direct screening prompt — goal is rough categorization for patient awareness
-  const prompt = `คุณเป็น AI ช่วยคัดกรองปัญหาฟันเบื้องต้น (dental screening) สำหรับ Dr. Clear Aligner คลินิก
-ดูรูปถ่ายฟัน ${images.length} รูปแล้วระบุว่าเห็นปัญหาอะไรบ้างในรูป${knowledgeSection}
+  <div style="margin-top:16px">
+    <label>📋 Raw JSON Response จาก Gemini</label>
+    <pre id="rawResponse"></pre>
+  </div>
+</div>
+
+<script>
+const CONDITION_LABELS = {
+  crowding:           '🦷 ฟันซ้อนกัน',
+  spacing:            '↔️ มีช่องว่างระหว่างฟัน',
+  overbite:           '⬇️ ฟันบนปิดทับฟันล่าง',
+  underbite:          '⬆️ ฟันล่างยื่นเกินฟันบน',
+  crossbite:          '❌ ฟันสบผิดที่',
+  openbite:           '⭕ ฟันหน้าไม่สบกัน',
+  protrusion:         '➡️ ฟันหน้ายื่นออกมาก',
+  midline:            '📏 แนวกลางฟันไม่ตรง',
+  procline:           '↗️ ฟันเอียงไปด้านหน้า',
+  tooth_decay_mild:   '🟤 คราบดำ/ฟันผุเล็กน้อย',
+  tooth_decay_severe: '⚠️ ฟันผุรุนแรง/แตกหัก',
+  scaling_needed:     '🔶 มีหินปูน/คราบเหลือง',
+  missing_tooth:      '🕳️ ฟันหายไป',
+  whitening_needed:   '🌟 ฟันเหลือง/มีคราบ',
+};
+
+const PROMPT = `คุณเป็น AI ช่วยคัดกรองปัญหาฟันเบื้องต้น (dental screening) สำหรับ Dr. Clear Aligner คลินิก
+ดูรูปถ่ายฟันแล้วระบุว่าเห็นปัญหาอะไรบ้างในรูป
 
 รหัสปัญหาที่ต้องระบุ (ใส่ทุกอันที่มองเห็นได้แม้จะไม่ชัดมาก):
 
@@ -59,44 +144,194 @@ export default async function handler(req, res) {
 
 หมายเหตุ: นี่เป็นการคัดกรองเบื้องต้น ไม่ใช่การวินิจฉัย — ให้ระบุทุกอย่างที่มองเห็นได้`;
 
+const PHOTO_SLOTS = [
+  { id: 'photo1', icon: '📷', name: 'รูปที่ 1', sub: '' },
+  { id: 'photo2', icon: '📷', name: 'รูปที่ 2', sub: '' },
+  { id: 'photo3', icon: '📷', name: 'รูปที่ 3', sub: '' },
+  { id: 'photo4', icon: '📷', name: 'รูปที่ 4', sub: '' },
+  { id: 'photo5', icon: '📷', name: 'รูปที่ 5', sub: '' },
+  { id: 'photo6', icon: '📷', name: 'รูปที่ 6', sub: '' },
+];
+
+let photoFiles = {}; // { slotId: File }
+
+function buildPhotoGrid() {
+  const grid = document.getElementById('photoGrid');
+  grid.innerHTML = PHOTO_SLOTS.map(slot => `
+    <label class="photo-slot" id="slot_${slot.id}" for="inp_${slot.id}">
+      <div class="photo-slot-icon">${slot.icon}</div>
+      <div class="photo-slot-name">${slot.name}</div>
+      <div class="photo-slot-sub">${slot.sub}</div>
+      <div class="photo-slot-overlay">🔄 เปลี่ยนรูป</div>
+      <input type="file" class="photo-input" id="inp_${slot.id}" accept="image/*"
+        onchange="handleSlotPhoto('${slot.id}', this)">
+    </label>
+  `).join('');
+}
+
+function handleSlotPhoto(slotId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  photoFiles[slotId] = file;
+  const slot = document.getElementById(`slot_${slotId}`);
+  slot.classList.add('has-photo');
+  const existing = slot.querySelector('img');
+  if (existing) existing.remove();
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(file);
+  slot.insertBefore(img, slot.firstChild);
+}
+
+function setStatus(msg, type = 'info') {
+  const el = document.getElementById('statusMsg');
+  el.style.display = 'block';
+  el.className = `status-line status-${type}`;
+  el.textContent = msg;
+}
+
+async function fileToBase64(file, maxPx = 1024, quality = 0.82) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let w = img.naturalWidth || img.width;
+          let h = img.naturalHeight || img.height;
+          if (!w || !h) { // ถ้าได้ขนาด 0 ส่งของเดิมไปเลย
+            res({ data: dataUrl.split(',')[1], mimeType: file.type || 'image/jpeg' });
+            return;
+          }
+          if (w > maxPx || h > maxPx) {
+            if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+            else       { w = Math.round(w * maxPx / h); h = maxPx; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { res({ data: dataUrl.split(',')[1], mimeType: file.type || 'image/jpeg' }); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          const base64 = compressed.split(',')[1];
+          if (!base64 || base64.length < 100) { // fallback ถ้า canvas output ว่าง
+            res({ data: dataUrl.split(',')[1], mimeType: file.type || 'image/jpeg' });
+          } else {
+            res({ data: base64, mimeType: 'image/jpeg' });
+          }
+        } catch(err) {
+          // fallback: ส่ง original ถ้า canvas error
+          res({ data: dataUrl.split(',')[1], mimeType: file.type || 'image/jpeg' });
+        }
+      };
+      img.onerror = () => res({ data: dataUrl.split(',')[1], mimeType: file.type || 'image/jpeg' });
+      img.src = dataUrl;
+    };
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function runTest() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { setStatus('❌ กรุณาใส่ API Key', 'err'); return; }
+  const fileList = Object.values(photoFiles);
+  if (fileList.length === 0) { setStatus('❌ กรุณาเลือกรูปภาพก่อน', 'err'); return; }
+
+  const btn = document.getElementById('testBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังวิเคราะห์...';
+  document.getElementById('resultCard').style.display = 'none';
+  setStatus(`🤖 กำลังส่งรูป ${fileList.length} รูป ไปให้ Gemini AI วิเคราะห์...`, 'info');
+
   try {
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [...imageParts, { text: prompt }] }],
-          generationConfig: { maxOutputTokens: 300, temperature: 0.4 }
-        })
-      }
-    );
+    // Convert images to base64
+    const imageParts = await Promise.all(fileList.map(fileToBase64));
 
-    if (!geminiResponse.ok) {
-      const errText = await geminiResponse.text();
-      console.error('Gemini API error:', errText);
-      return res.status(502).json({ error: 'AI service error: ' + errText.slice(0, 200) });
-    }
+    const parts = [
+      ...imageParts.map(img => ({ inlineData: { mimeType: img.mimeType, data: img.data } })),
+      { text: PROMPT }
+    ];
 
-    const result = await geminiResponse.json();
-    const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    console.log('Gemini raw response:', rawText);
-
-    // Extract JSON from response (handle markdown code blocks too)
-    const jsonMatch = rawText.match(/\{[\s\S]*?\}/);
-    let parsed = { detected: [], confidence: 'low', notes: '' };
-    if (jsonMatch) {
-      try { parsed = JSON.parse(jsonMatch[0]); } catch(e) { console.error('JSON parse error:', e); }
-    }
-
-    return res.status(200).json({
-      detected: Array.isArray(parsed.detected) ? parsed.detected : [],
-      confidence: parsed.confidence || 'medium',
-      notes: parsed.notes || ''
+    const payload = JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: { maxOutputTokens: 4096, temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } }
     });
 
-  } catch (err) {
-    console.error('Analysis error:', err);
-    return res.status(500).json({ error: 'Failed to analyze: ' + err.message });
+    // Retry up to 3 times on 503 / high-demand errors
+    let data, resp;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      setStatus(`🤖 กำลังวิเคราะห์... (ครั้งที่ ${attempt}/3)`, 'info');
+      resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload }
+      );
+      data = await resp.json();
+      if (resp.ok) break;
+      const code = data?.error?.code || resp.status;
+      if ((code === 503 || code === 429) && attempt < 3) {
+        setStatus(`⏳ Server ยุ่ง รอ ${attempt * 3} วินาทีแล้วลองใหม่...`, 'info');
+        await new Promise(r => setTimeout(r, attempt * 3000));
+      } else break;
+    }
+
+    if (!resp.ok) {
+      const errMsg = data?.error?.message || JSON.stringify(data);
+      setStatus('❌ Gemini Error: ' + errMsg, 'err');
+      document.getElementById('rawResponse').textContent = JSON.stringify(data, null, 2);
+      document.getElementById('resultCard').style.display = 'block';
+      return;
+    }
+
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    document.getElementById('rawResponse').textContent =
+      '=== Raw text from Gemini ===\n' + rawText + '\n\n=== Full API response ===\n' + JSON.stringify(data, null, 2);
+
+    // Parse JSON — handle markdown code blocks and greedy match
+    let parsed = null;
+    // Try stripping markdown code block first
+    const stripped = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);  // greedy — capture largest block
+    if (jsonMatch) {
+      try { parsed = JSON.parse(jsonMatch[0]); } catch(e) {
+        console.error('Parse error on:', jsonMatch[0], e);
+      }
+    }
+
+    if (parsed) {
+      setStatus(`✅ วิเคราะห์เสร็จ — พบ ${parsed.detected?.length || 0} ปัญหา`, 'ok');
+
+      const conf = parsed.confidence || 'low';
+      const badge = document.getElementById('confidenceBadge');
+      badge.textContent = { high: '🟢 ความมั่นใจสูง', medium: '🟡 ปานกลาง', low: '🔴 ต่ำ' }[conf] || conf;
+      badge.className = 'badge ' + ({ high: 'badge-success', medium: 'badge-warning', low: 'badge-danger' }[conf] || 'badge-warning');
+
+      const tags = document.getElementById('detectedTags');
+      if (parsed.detected?.length > 0) {
+        tags.innerHTML = parsed.detected.map(id =>
+          `<span class="condition-tag" title="${id}">${CONDITION_LABELS[id] || id}</span>`
+        ).join('');
+      } else {
+        tags.innerHTML = '<span style="color:#E74C3C">ไม่พบปัญหา (detected = [])</span>';
+      }
+
+      document.getElementById('notesText').textContent = parsed.notes || '';
+    } else {
+      setStatus('⚠️ ได้รับ response แต่ parse JSON ไม่ได้ — ดู raw text ด้านล่าง', 'err');
+    }
+
+    document.getElementById('resultCard').style.display = 'block';
+
+  } catch(err) {
+    setStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 ทดสอบ AI วิเคราะห์';
   }
 }
+
+// Init
+buildPhotoGrid();
+</script>
+</body>
+</html>

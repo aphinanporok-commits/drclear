@@ -229,6 +229,24 @@
 <script src="js/dental-data.js"></script>
 <script src="js/supabase-client.js"></script>
 <script>
+  // ===== Condition label map (EN id → TH label) =====
+  const CONDITION_LABELS = {
+    crowding:           '🦷 ฟันซ้อนกัน',
+    spacing:            '↔️ มีช่องว่างระหว่างฟัน',
+    overbite:           '⬇️ ฟันบนปิดทับฟันล่าง',
+    underbite:          '⬆️ ฟันล่างยื่นเกินฟันบน',
+    crossbite:          '❌ ฟันสบผิดที่',
+    openbite:           '⭕ ฟันหน้าไม่สบกัน',
+    protrusion:         '➡️ ฟันหน้ายื่นออกมาก',
+    midline:            '📏 แนวกลางฟันไม่ตรง',
+    procline:           '↗️ ฟันเอียงไปด้านหน้า',
+    tooth_decay_mild:   '🟤 คราบดำ/ฟันผุเล็กน้อย',
+    tooth_decay_severe: '⚠️ ฟันผุรุนแรง/แตกหัก',
+    scaling_needed:     '🔶 มีหินปูน/คราบเหลือง',
+    missing_tooth:      '🕳️ ฟันหายไป',
+    whitening_needed:   '🌟 ฟันเหลือง/มีคราบ',
+  };
+
   // ===== STATE =====
   let currentStep = 1;
   let photoFiles = {};
@@ -236,12 +254,12 @@
   let generatedReport = null;
 
   const PHOTO_SLOTS = [
-    { id: 'front_closed', label: 'ด้านหน้า\n(ฟันชิดกัน)', icon: '😐' },
-    { id: 'front_open',   label: 'ด้านหน้า\n(ฟันห่างกัน)', icon: '😮' },
-    { id: 'left',         label: 'ด้านซ้าย\n(กัดฟัน)', icon: '◀️' },
-    { id: 'top',          label: 'ด้านบน', icon: '⬆️' },
-    { id: 'bottom',       label: 'ด้านล่าง', icon: '⬇️' },
-    { id: 'right',        label: 'ด้านขวา\n(กัดฟัน)', icon: '▶️' },
+    { id: 'front_closed', label: 'รูปที่ 1', icon: '📷' },
+    { id: 'front_open',   label: 'รูปที่ 2', icon: '📷' },
+    { id: 'left',         label: 'รูปที่ 3', icon: '📷' },
+    { id: 'top',          label: 'รูปที่ 4', icon: '📷' },
+    { id: 'bottom',       label: 'รูปที่ 5', icon: '📷' },
+    { id: 'right',        label: 'รูปที่ 6', icon: '📷' },
   ];
 
   // ===== สร้าง Photo Grid =====
@@ -477,20 +495,50 @@
     statusEl.innerHTML = '<span style="color:var(--primary)">🤖 AI กำลังวิเคราะห์รูปภาพ กรุณารอสักครู่...</span>';
 
     try {
-      // Convert photos to base64
-      const images = await Promise.all(
-        Object.entries(photoFiles).map(([slotId, file]) =>
-          new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => {
-              const base64 = e.target.result.split(',')[1];
-              resolve({ slotId, data: base64, mediaType: file.type || 'image/jpeg' });
+      // Compress + convert photos to base64 (max 1024px, 0.82 quality) with fallback
+      function compressImage(file, maxPx = 1024, quality = 0.82) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = e => {
+            const dataUrl = e.target.result;
+            const img = new Image();
+            img.onload = () => {
+              try {
+                let w = img.naturalWidth || img.width;
+                let h = img.naturalHeight || img.height;
+                if (!w || !h) { resolve({ data: dataUrl.split(',')[1], mediaType: file.type || 'image/jpeg' }); return; }
+                if (w > maxPx || h > maxPx) {
+                  if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+                  else       { w = Math.round(w * maxPx / h); h = maxPx; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { resolve({ data: dataUrl.split(',')[1], mediaType: file.type || 'image/jpeg' }); return; }
+                ctx.drawImage(img, 0, 0, w, h);
+                const compressed = canvas.toDataURL('image/jpeg', quality);
+                const base64 = compressed.split(',')[1];
+                resolve(base64 && base64.length > 100
+                  ? { data: base64, mediaType: 'image/jpeg' }
+                  : { data: dataUrl.split(',')[1], mediaType: file.type || 'image/jpeg' });
+              } catch(err) {
+                resolve({ data: dataUrl.split(',')[1], mediaType: file.type || 'image/jpeg' });
+              }
             };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          })
-        )
-      );
+            img.onerror = () => resolve({ data: dataUrl.split(',')[1], mediaType: file.type || 'image/jpeg' });
+            img.src = dataUrl;
+          };
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const images = (await Promise.all(
+        Object.entries(photoFiles).map(async ([slotId, file]) => {
+          const compressed = await compressImage(file);
+          return compressed ? { slotId, ...compressed } : null;
+        })
+      )).filter(Boolean);
 
       // Fetch knowledge base context to improve AI accuracy
       let knowledgeContext = '';
@@ -537,12 +585,16 @@
 
       // Show result banner in Step 3
       const confidenceLabel = { high: '🟢 สูง', medium: '🟡 ปานกลาง', low: '🔴 ต่ำ' }[confidence] || confidence;
+      const detectedTags = detected.map(id =>
+        `<span style="display:inline-block;background:#1B6FA8;color:white;padding:3px 10px;border-radius:20px;font-size:12px;margin:2px">${CONDITION_LABELS[id] || id}</span>`
+      ).join('');
       const bannerEl = document.getElementById('aiResultBanner');
       bannerEl.style.display = 'block';
       bannerEl.innerHTML = `
         <div style="padding:12px 16px;background:#EBF5FF;border-radius:8px;border-left:4px solid var(--primary)">
           <strong>🤖 AI วิเคราะห์แล้ว</strong> — พบปัญหา ${detected.length} รายการ (ความมั่นใจ: ${confidenceLabel})
-          ${notes ? `<div style="margin-top:4px;font-size:13px;color:var(--text-muted)">${notes}</div>` : ''}
+          ${detected.length > 0 ? `<div style="margin-top:8px">${detectedTags}</div>` : ''}
+          ${notes ? `<div style="margin-top:6px;font-size:13px;color:var(--text-muted)">${notes}</div>` : ''}
           <div style="margin-top:6px;font-size:12px;color:var(--text-muted)">✏️ คุณสามารถติ๊กเพิ่ม/ยกเลิกได้ด้านล่าง</div>
         </div>`;
 
