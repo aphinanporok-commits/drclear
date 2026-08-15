@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GEMINI_API_KEY not configured in Vercel environment variables. Get a free key at https://aistudio.google.com/app/apikey' });
   }
 
-  const { images } = req.body;
+  const { images, knowledgeContext } = req.body;
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'No images provided.' });
   }
@@ -58,23 +58,29 @@ export default async function handler(req, res) {
     }
   }));
 
+  const knowledgeSection = knowledgeContext
+    ? `\nCLINIC KNOWLEDGE BASE (ใช้ข้อมูลนี้ประกอบการประเมิน):\n${knowledgeContext}\n`
+    : '';
+
   const promptPart = {
-    text: `You are an expert dental assessment AI for Dr. Clear Aligner clinic. Carefully analyze these ${images.length} dental photo(s) and identify which conditions are visible.
+    text: `You are an expert dental assessment AI for Dr. Clear Aligner clinic in Thailand. Analyze these ${images.length} dental photo(s) thoroughly and identify ALL visible conditions.
 
 ${CONDITION_LIST}
-
+${knowledgeSection}
 Instructions:
-1. Examine each photo carefully for visible dental conditions.
-2. Only include conditions you can clearly identify from the photos.
-3. Return ONLY a valid JSON object in this exact format — no explanation, no markdown:
+1. ตรวจสอบรูปถ่ายแต่ละรูปอย่างละเอียด — ดูการเรียงตัวของฟัน ช่องว่าง การซ้อนกัน ตำแหน่งของขากรรไกร สีฟัน และหินปูน
+2. รวมทุกปัญหาที่มองเห็นได้อย่างสมเหตุสมผล — อย่าข้ามปัญหาที่มองเห็นได้ชัดเจน
+3. ฟันมักมีปัญหาหลายอย่างพร้อมกัน (เช่น ฟันเกและฟันเหลือง) ให้ระบุทั้งหมด
+4. Confidence: "high" = เห็นชัดเจน, "medium" = น่าจะมี, "low" = ภาพไม่ชัดหรือไม่แน่ใจ
+5. Return ONLY a valid JSON object — no explanation, no markdown:
 
 {
   "detected": ["condition_id_1", "condition_id_2"],
   "confidence": "high" | "medium" | "low",
-  "notes": "Brief observation in Thai language"
+  "notes": "สรุปสั้นๆ เป็นภาษาไทย"
 }
 
-Be conservative — only flag conditions you can clearly see. If image quality is poor or a condition is unclear, do not include it.`
+สำคัญ: ถ้าเห็นฟันเก ฟันห่าง หรือปัญหาอื่นในรูป ให้ระบุใน detected เสมอ`
   };
 
   try {
@@ -90,7 +96,7 @@ Be conservative — only flag conditions you can clearly see. If image quality i
           }],
           generationConfig: {
             maxOutputTokens: 512,
-            temperature: 0.1  // Low temperature for consistent, conservative analysis
+            temperature: 0.3  // Balanced — accurate but not overly conservative
           }
         })
       }

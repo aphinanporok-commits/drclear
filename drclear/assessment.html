@@ -492,11 +492,25 @@
         )
       );
 
+      // Fetch knowledge base context to improve AI accuracy
+      let knowledgeContext = '';
+      try {
+        const kbFiles = await KnowledgeFiles.getAll();
+        const textFiles = kbFiles.filter(f => f.content && !f.content.startsWith('[PDF'));
+        if (textFiles.length > 0) {
+          knowledgeContext = textFiles
+            .map(f => `[${f.filename}]\n${f.content.substring(0, 1000)}`)
+            .join('\n\n');
+        }
+      } catch(e) {
+        console.warn('Could not fetch knowledge base:', e);
+      }
+
       // Call Vercel API route
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images })
+        body: JSON.stringify({ images, knowledgeContext })
       });
 
       if (!response.ok) {
