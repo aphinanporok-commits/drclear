@@ -159,7 +159,6 @@
   }
 
   async function deleteAssessment(id, num) {
-    if (!confirm(`ลบการประเมินครั้งที่ ${num}?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) return;
     try {
       const { error } = await db.from('assessments').delete().eq('id', id);
       if (error) throw error;
@@ -172,8 +171,6 @@
   }
 
   async function deletePatient() {
-    const name = document.getElementById('patientNameTitle').textContent;
-    if (!confirm(`ลบข้อมูลลูกค้า "${name}" และประวัติทั้งหมดออกจากระบบ?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) return;
     try {
       const { error } = await db.from('patients').delete().eq('id', patientId);
       if (error) throw error;
