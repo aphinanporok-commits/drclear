@@ -113,6 +113,7 @@
         <td style="display:flex;gap:6px">
           <a href="patient-detail.html?id=${p.id}" class="btn btn-outline btn-sm">📋 ดูรายละเอียด</a>
           <a href="assessment.html?patient_id=${p.id}" class="btn btn-primary btn-sm">➕ ประเมินใหม่</a>
+          <button class="btn btn-sm" style="background:#FDECEA;color:#E74C3C;border:1px solid #E74C3C" onclick="deletePatient('${p.id}','${p.name.replace(/'\/g,\"\\'\")}')"> 🗑️ ลบ</button>
         </td>
       </tr>
     `).join('');
@@ -130,6 +131,28 @@
         console.error(e);
       }
     }, 300);
+  }
+
+  async function deletePatient(id, name) {
+    if (!confirm(`ลบข้อมูลลูกค้า "${name}" ออกจากระบบ?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) return;
+    try {
+      const { error } = await db.from('patients').delete().eq('id', id);
+      if (error) throw error;
+      allPatients = allPatients.filter(p => p.id !== id);
+      renderTable(allPatients);
+      showToast(`ลบ "${name}" เรียบร้อยแล้ว`, 'success');
+    } catch(err) {
+      console.error(err);
+      showToast('ลบไม่สำเร็จ: ' + err.message, 'error');
+    }
+  }
+
+  function showToast(msg, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = msg;
+    document.getElementById('toastContainer').appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
   }
 
   loadPatients();
