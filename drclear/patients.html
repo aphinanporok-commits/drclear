@@ -113,7 +113,8 @@
         <td style="display:flex;gap:6px">
           <a href="patient-detail.html?id=${p.id}" class="btn btn-outline btn-sm">📋 ดูรายละเอียด</a>
           <a href="assessment.html?patient_id=${p.id}" class="btn btn-primary btn-sm">➕ ประเมินใหม่</a>
-          <button class="btn btn-sm" style="background:#FDECEA;color:#E74C3C;border:1px solid #E74C3C" onclick="deletePatient('${p.id}', ${JSON.stringify(p.name)})">🗑️ ลบ</button>
+          <button class="btn btn-sm" style="background:#FDECEA;color:#E74C3C;border:1px solid #E74C3C"
+            onclick="deletePatient('${p.id}', decodeURIComponent('${encodeURIComponent(p.name)}'))">🗑️ ลบ</button>
         </td>
       </tr>
     `).join('');
