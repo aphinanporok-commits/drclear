@@ -35,6 +35,7 @@
     <div style="display:flex;gap:8px">
       <a href="patients.html" class="btn btn-outline btn-sm">← รายชื่อ</a>
       <button class="btn btn-primary btn-sm" id="newAssessBtn">➕ ประเมินใหม่</button>
+      <button class="btn btn-sm" style="background:#FDECEA;color:#E74C3C;border:1px solid #E74C3C" onclick="deletePatient()">🗑️ ลบลูกค้านี้</button>
     </div>
   </div>
 
@@ -146,6 +147,7 @@
 
             <button class="btn btn-outline btn-sm" onclick="showReport('${a.id}')">📄 ดูรายงาน</button>
             <button class="btn btn-outline btn-sm" onclick="printReport(${idx})">🖨️ พิมพ์</button>
+            <button class="btn btn-sm" style="background:#FDECEA;color:#E74C3C;border:1px solid #E74C3C" onclick="deleteAssessment('${a.id}', ${assessments.length - idx})">🗑️ ลบ</button>
           </div>
           <div id="report_${a.id}" style="display:none;margin-bottom:12px" data-report="${encodeURIComponent(a.report_text || '')}"></div>
         `}).join('');
@@ -154,6 +156,41 @@
       console.error(err);
       document.getElementById('patientCard').innerHTML = `<div class="alert alert-danger">โหลดข้อมูลไม่สำเร็จ: ${err.message}</div>`;
     }
+  }
+
+  async function deleteAssessment(id, num) {
+    if (!confirm(`ลบการประเมินครั้งที่ ${num}?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) return;
+    try {
+      const { error } = await db.from('assessments').delete().eq('id', id);
+      if (error) throw error;
+      showToast('ลบการประเมินเรียบร้อยแล้ว', 'success');
+      load();
+    } catch(err) {
+      console.error(err);
+      showToast('ลบไม่สำเร็จ: ' + err.message, 'error');
+    }
+  }
+
+  async function deletePatient() {
+    const name = document.getElementById('patientNameTitle').textContent;
+    if (!confirm(`ลบข้อมูลลูกค้า "${name}" และประวัติทั้งหมดออกจากระบบ?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) return;
+    try {
+      const { error } = await db.from('patients').delete().eq('id', patientId);
+      if (error) throw error;
+      showToast('ลบลูกค้าเรียบร้อยแล้ว', 'success');
+      setTimeout(() => { location.href = 'patients.html'; }, 1200);
+    } catch(err) {
+      console.error(err);
+      showToast('ลบไม่สำเร็จ: ' + err.message, 'error');
+    }
+  }
+
+  function showToast(msg, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = msg;
+    document.getElementById('toastContainer').appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
   }
 
   function showReport(id) {
