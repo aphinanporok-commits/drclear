@@ -242,6 +242,13 @@
 <!-- Toast -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- Lightbox -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out" onclick="this.style.display='none'">
+  <img id="lightboxImg" src="" style="max-width:92vw;max-height:88vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+  <div id="lightboxLabel" style="position:absolute;bottom:24px;left:0;right:0;text-align:center;color:white;font-size:14px;font-family:Sarabun,sans-serif;text-shadow:0 1px 4px rgba(0,0,0,0.8)"></div>
+  <button onclick="event.stopPropagation();document.getElementById('lightbox').style.display='none'" style="position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.15);border:none;color:white;font-size:26px;cursor:pointer;border-radius:50%;width:40px;height:40px;line-height:40px;text-align:center">×</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/dental-data.js"></script>
@@ -283,7 +290,7 @@
     { id: 'right',        label: 'รูปที่ 6', icon: '📷' },
   ];
 
-  // ===== สร้าง Photo Grid =====
+  // =====+ ��ร้าง Photo Grid =====
   function buildPhotoGrid() {
     const grid = document.getElementById('photoGrid');
     grid.innerHTML = PHOTO_SLOTS.map(slot => `
@@ -442,9 +449,10 @@
     thumbs.innerHTML = Object.entries(photoFiles).map(([id, file]) => {
       const slot = PHOTO_SLOTS.find(s => s.id === id);
       const url = URL.createObjectURL(file);
+      const label = `${slot?.icon || ''} ${slot?.label.split('\n')[0] || ''}`;
       return `<div style="text-align:center">
-        <img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--border)">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${slot?.icon || ''} ${slot?.label.split('\n')[0] || ''}</div>
+        <img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--border);cursor:zoom-in" onclick="openLightbox(this.src,'${label.replace(/'/g,'&apos;')}')">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${label}</div>
       </div>`;
     }).join('');
   }
@@ -852,8 +860,9 @@
           wrapper.style.cssText = 'position:relative;flex:0 0 auto;';
           const previewImg = document.createElement('img');
           previewImg.src = `data:image/jpeg;base64,${imgData.data}`;
-          previewImg.style.cssText = 'width:160px;height:120px;object-fit:cover;border-radius:8px;display:block;border:2px solid var(--border)';
+          previewImg.style.cssText = 'width:160px;height:120px;object-fit:cover;border-radius:8px;display:block;border:2px solid var(--border);cursor:zoom-in';
           previewImg.alt = slotInfo?.label || `รูปที่ ${idx+1}`;
+          previewImg.onclick = () => openLightbox(previewImg.src, (slotInfo?.icon || '📷') + ' ' + (slotInfo?.label || `รูปที่ ${idx+1}`));
           wrapper.appendChild(previewImg);
           const labelDiv = document.createElement('div');
           labelDiv.style.cssText = 'font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px';
@@ -909,6 +918,14 @@
       btn.textContent = '🔍 วิเคราะห์รูปภาพด้วย AI';
       showToast('วิเคราะห์ไม่สำเร็จ: ' + err.message, 'error');
     }
+  }
+
+  // ===== Lightbox =====
+  function openLightbox(src, label) {
+    const lb = document.getElementById('lightbox');
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightboxLabel').textContent = label || '';
+    lb.style.display = 'flex';
   }
 
   // ===== Init =====
