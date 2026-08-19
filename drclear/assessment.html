@@ -29,6 +29,12 @@
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
     .nav-buttons { display: flex; justify-content: space-between; margin-top: 24px; }
+
+    /* Annotation canvas overlay */
+    .photo-slot { position: relative; overflow: visible; }
+    .ann-canvas  { border-radius: 4px; }
+    #annotatedPhotoGrid > div { cursor: default; }
+    #annotatedPhotoGrid img  { display: block; }
   </style>
 </head>
 <body>
@@ -159,18 +165,30 @@
         <div style="font-size:13px;color:var(--text-muted)" id="selectedCount">à¹à¸¥à¸·à¸­à¸à¹à¸¥à¹à¸§: 0 à¸à¹à¸­</div>
       </div>
       <div id="aiResultBanner" style="display:none;margin-bottom:12px"></div>
+
+      <!-- Annotated photos panel â shown after AI analysis -->
+      <div id="annotatedPhotosPanel" style="display:none;margin-bottom:16px">
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:10px">
+          ð à¸à¸³à¹à¸«à¸à¹à¸à¸à¸±à¸à¸«à¸²à¸à¸µà¹ AI à¸à¸£à¸§à¸à¸à¸
+        </div>
+        <div id="annotatedPhotoGrid" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">
+          ð´ à¹à¸à¸ = à¸£à¸¸à¸à¹à¸£à¸ &nbsp;|&nbsp; ð  à¸ªà¹à¸¡ = à¸à¸²à¸à¸à¸¥à¸²à¸ &nbsp;|&nbsp; ð¡ à¹à¸«à¸¥à¸·à¸­à¸ = à¹à¸¥à¹à¸à¸à¹à¸­à¸¢
+        </div>
+      </div>
+
       <div class="alert alert-info">
-        ð¡ à¸à¸¹à¸£à¸¹à¸à¸à¹à¸²à¸¢à¹à¸¥à¹à¸§à¸à¸´à¹à¸à¹à¸¥à¸·à¸­à¸à¸à¸±à¸à¸«à¸² à¸à¸µà¹à¸¡à¸­à¸à¹à¸«à¹à¸ â à¸£à¸°hà¸à¸ AI à¸à¸°à¸à¹à¸§à¸¢à¸à¸´à¹à¸à¹à¸«à¹à¸­à¸±à¸à¹à¸à¸¡à¸±à¸à¸´ à¹à¸à¹à¸à¸¸à¸à¸ªà¸²à¸¡à¸²à¸£à¸à¹à¸à¹à¹à¸à¹à¸­à¸à¹à¸à¹
+        ð¡ à¸à¸¹à¸£à¸¹à¸à¸à¹à¸²à¸¢à¹à¸¥à¹à¸§à¸à¸´à¹à¸à¹à¸¥à¸·à¸­à¸à¸à¸±à¸à¸«à¸²à¸à¸µà¹à¸à¸ â à¸£à¸°à¸à¸ AI à¸à¸°à¸à¹à¸§à¸¢à¸à¸´à¹à¸à¹à¸«à¹à¸­à¸±à¸à¹à¸à¸¡à¸±à¸à¸´ à¹à¸à¹à¸à¸¸à¸à¸ªà¸²à¸¡à¸²à¸£à¸à¹à¸à¹à¹à¸à¹à¸­à¸à¹à¸à¹
       </div>
       <div id="conditionList"><!-- à¸ªà¸£à¹à¸²à¸à¹à¸à¸¢ JS --></div>
       <div class="nav-buttons">
         <button class="btn btn-outline" onclick="goStep(2)">â à¸¢à¹à¸­à¸à¸à¸¥à¸±à¸</button>
-        <button class="btn btn-primary" onclick="generateAndGoStep4()">àºªà¸£à¹à¸²à¸à¸£à¸²à¸¢à¸à¸²à¸ ð </button>
+        <button class="btn btn-primary" onclick="generateAndGoStep4()">à¸ªà¸£à¹à¸²à¸à¸£à¸²à¸¢à¸à¸²à¸ ð â</button>
       </div>
     </div>
   </div>
 
-  <!-- STEP : Report -->
+  <!-- STEP 4: Report -->
   <div class="step-content" id="step4">
     <div class="card">
       <div class="card-header">
@@ -206,7 +224,7 @@
         <div style="display:flex;gap:10px">
           <button class="btn btn-outline" onclick="printReport()">ð¨ï¸ à¸à¸´à¸¡à¸à¹</button>
           <button class="btn btn-success" onclick="saveAssessment()" id="saveBtn">
-            ð¾ à¸à¸±à¸à¸à¸¶à¸:
+            ð¾ à¸à¸±à¸à¸à¸¶à¸à¸¥à¸à¸£à¸°à¸à¸
           </button>
         </div>
       </div>
@@ -254,6 +272,7 @@
   let generatedReport = null;
   let aiOralHealth = null;
   let aiJawSurgery = null;
+  let aiAnnotations = {};  // { slotId: [{label, condition_id, box, severity}] }
 
   const PHOTO_SLOTS = [
     { id: 'front_closed', label: 'à¸£à¸¹à¸à¸à¸µà¹ 1', icon: 'ð·' },
@@ -350,6 +369,8 @@
     document.getElementById(`step${n}`).classList.add('active');
     currentStep = n;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Redraw annotation boxes after step switch (layout may have shifted)
+    if (n === 2) setTimeout(redrawAllAnnotations, 200);
   }
 
   function generateAndGoStep4() {
@@ -524,6 +545,114 @@
     setTimeout(() => toast.remove(), 4000);
   }
 
+  // Polyfill roundRect for older browsers
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      r = Math.min(r, w/2, h/2);
+      this.beginPath();
+      this.moveTo(x+r, y);
+      this.lineTo(x+w-r, y); this.arcTo(x+w, y, x+w, y+r, r);
+      this.lineTo(x+w, y+h-r); this.arcTo(x+w, y+h, x+w-r, y+h, r);
+      this.lineTo(x+r, y+h); this.arcTo(x, y+h, x, y+h-r, r);
+      this.lineTo(x, y+r); this.arcTo(x, y, x+r, y, r);
+      this.closePath(); return this;
+    };
+  }
+
+  // ===== Bounding Box Annotations =====
+  const ANNOTATION_COLORS = {
+    high:   { border: '#E74C3C', bg: 'rgba(231,76,60,0.18)',   label: '#E74C3C' },
+    medium: { border: '#E67E22', bg: 'rgba(230,126,34,0.18)',  label: '#E67E22' },
+    low:    { border: '#F1C40F', bg: 'rgba(241,196,15,0.18)',  label: '#D4AC0D' },
+  };
+
+  function drawAnnotationsOnSlot(slotId, annotations) {
+    const slot = document.getElementById(`slot_${slotId}`);
+    if (!slot) return;
+    const img = slot.querySelector('img');
+    if (!img) return;
+
+    // Remove existing canvas overlay
+    slot.querySelectorAll('.ann-canvas').forEach(c => c.remove());
+    if (!annotations || annotations.length === 0) return;
+
+    const render = () => {
+      const W = img.offsetWidth;
+      const H = img.offsetHeight;
+      if (!W || !H) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const canvas = document.createElement('canvas');
+      canvas.className = 'ann-canvas';
+      canvas.width  = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.cssText = `
+        position:absolute;top:${img.offsetTop}px;left:${img.offsetLeft}px;
+        width:${W}px;height:${H}px;pointer-events:none;z-index:15;border-radius:4px;
+      `;
+      slot.style.position = 'relative';
+      slot.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      annotations.forEach(ann => {
+        const [ymin, xmin, ymax, xmax] = ann.box || [];
+        if (ymin == null) return;
+        const x = (xmin / 1000) * W;
+        const y = (ymin / 1000) * H;
+        const w = ((xmax - xmin) / 1000) * W;
+        const h = ((ymax - ymin) / 1000) * H;
+        const c = ANNOTATION_COLORS[ann.severity] || ANNOTATION_COLORS.medium;
+
+        // Semi-transparent fill
+        ctx.fillStyle = c.bg;
+        ctx.fillRect(x, y, w, h);
+
+        // Border
+        ctx.strokeStyle = c.border;
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(x, y, w, h);
+
+        // Corner markers (more prominent)
+        const cs = Math.min(w, h, 14);
+        ctx.lineWidth = 3;
+        [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy],i) => {
+          ctx.beginPath();
+          const sx = i%2===0 ? 1 : -1, sy = i<2 ? 1 : -1;
+          ctx.moveTo(cx + sx*cs, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy*cs);
+          ctx.stroke();
+        });
+
+        // Label pill
+        const label = ann.label || '';
+        ctx.font = 'bold 11px Sarabun, sans-serif';
+        const tw = ctx.measureText(label).width + 10;
+        const th = 20;
+        const lx = Math.min(x, W - tw - 2);
+        const ly = y > th + 2 ? y - th - 2 : y + h + 2;
+
+        // Pill background
+        ctx.fillStyle = c.label;
+        ctx.beginPath();
+        ctx.roundRect(lx, ly, tw, th, 4);
+        ctx.fill();
+
+        // Label text
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(label, lx + 5, ly + 14);
+      });
+    };
+
+    if (img.complete && img.naturalWidth > 0) render();
+    else img.addEventListener('load', render, { once: true });
+  }
+
+  // Rebuild all annotation canvases (called after step change or resize)
+  function redrawAllAnnotations() {
+    Object.entries(aiAnnotations).forEach(([slotId, anns]) => drawAnnotationsOnSlot(slotId, anns));
+  }
+
   // ===== AI Photo Analysis =====
   async function analyzePhotos() {
     const uploadedFiles = Object.values(photoFiles);
@@ -612,9 +741,24 @@
       }
 
       const result = await response.json();
-      const { detected = [], confidence = 'low', notes = '', oral_health = null, jaw_surgery = null } = result;
+      const { detected = [], confidence = 'low', notes = '', oral_health = null, jaw_surgery = null, annotations = [] } = result;
       aiOralHealth = oral_health;
       aiJawSurgery = jaw_surgery;
+
+      // Map annotations (image_index â slotId) and draw bounding boxes
+      aiAnnotations = {};
+      const imageSlotIds = images.map(img => img.slotId);
+      annotations.forEach(ann => {
+        const slotId = imageSlotIds[(ann.image_index || 1) - 1];
+        if (slotId) {
+          if (!aiAnnotations[slotId]) aiAnnotations[slotId] = [];
+          aiAnnotations[slotId].push(ann);
+        }
+      });
+      // Draw after short delay to ensure images are rendered
+      setTimeout(() => {
+        Object.entries(aiAnnotations).forEach(([slotId, anns]) => drawAnnotationsOnSlot(slotId, anns));
+      }, 300);
 
       // Pre-check detected conditions (clear old selections first)
       selectedConditions.clear();
@@ -693,6 +837,67 @@
       btn.textContent = 'â à¸§à¸´à¹à¸à¸£à¸²à¸°à¸«à¹à¹à¸ªà¸£à¹à¸à¹à¸¥à¹à¸§';
 
       showToast(`AI à¸à¸à¸à¸±à¸à¸«à¸² ${detected.length} à¸£à¸²à¸¢à¸à¸²à¸£ â`, 'success');
+
+      // Build annotated photo panel in Step 3
+      const annotatedGrid = document.getElementById('annotatedPhotoGrid');
+      const annotatedPanel = document.getElementById('annotatedPhotosPanel');
+      if (annotatedGrid && Object.keys(aiAnnotations).length > 0) {
+        annotatedGrid.innerHTML = '';
+        // Show each photo that has annotations as a larger annotated preview
+        images.forEach((imgData, idx) => {
+          const slotId = imgData.slotId;
+          const slotAnns = aiAnnotations[slotId] || [];
+          const slotInfo = PHOTO_SLOTS.find(s => s.id === slotId);
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'position:relative;flex:0 0 auto;';
+          const previewImg = document.createElement('img');
+          previewImg.src = `data:image/jpeg;base64,${imgData.data}`;
+          previewImg.style.cssText = 'width:160px;height:120px;object-fit:cover;border-radius:8px;display:block;border:2px solid var(--border)';
+          previewImg.alt = slotInfo?.label || `à¸£à¸¹à¸à¸à¸µà¹ ${idx+1}`;
+          wrapper.appendChild(previewImg);
+          const labelDiv = document.createElement('div');
+          labelDiv.style.cssText = 'font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px';
+          labelDiv.textContent = (slotInfo?.icon || 'ð·') + ' ' + (slotInfo?.label || `à¸£à¸¹à¸à¸à¸µà¹ ${idx+1}`);
+          wrapper.appendChild(labelDiv);
+          annotatedGrid.appendChild(wrapper);
+          // Draw annotations on preview
+          if (slotAnns.length > 0) {
+            const drawPreview = () => {
+              wrapper.querySelectorAll('.ann-canvas').forEach(c => c.remove());
+              const W = previewImg.offsetWidth || 160;
+              const H = previewImg.offsetHeight || 120;
+              const dpr = window.devicePixelRatio || 1;
+              const cv = document.createElement('canvas');
+              cv.className = 'ann-canvas';
+              cv.width = W * dpr; cv.height = H * dpr;
+              cv.style.cssText = `position:absolute;top:0;left:0;width:${W}px;height:${H}px;pointer-events:none;z-index:15;border-radius:8px;`;
+              wrapper.appendChild(cv);
+              const ctx = cv.getContext('2d');
+              ctx.scale(dpr, dpr);
+              slotAnns.forEach(ann => {
+                const [ymin, xmin, ymax, xmax] = ann.box || [];
+                if (ymin == null) return;
+                const x=(xmin/1000)*W, y=(ymin/1000)*H, w=((xmax-xmin)/1000)*W, h=((ymax-ymin)/1000)*H;
+                const c = ANNOTATION_COLORS[ann.severity] || ANNOTATION_COLORS.medium;
+                ctx.fillStyle = c.bg; ctx.fillRect(x,y,w,h);
+                ctx.strokeStyle = c.border; ctx.lineWidth = 2; ctx.strokeRect(x,y,w,h);
+                const label = ann.label || '';
+                ctx.font = 'bold 10px Sarabun, sans-serif';
+                const tw = ctx.measureText(label).width + 8, th = 17;
+                const lx = Math.min(x, W-tw-1), ly = y>th+1 ? y-th-1 : y+h+1;
+                ctx.fillStyle = c.label;
+                ctx.beginPath(); ctx.roundRect(lx,ly,tw,th,3); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.fillText(label, lx+4, ly+12);
+              });
+            };
+            if (previewImg.complete && previewImg.naturalWidth > 0) drawPreview();
+            else previewImg.addEventListener('load', drawPreview, {once:true});
+          }
+        });
+        annotatedPanel.style.display = 'block';
+      } else if (annotatedPanel) {
+        annotatedPanel.style.display = 'none';
+      }
 
       // Auto-advance to Step 3 after short delay
       setTimeout(() => goStep(3), 1200);
