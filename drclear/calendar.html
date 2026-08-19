@@ -356,6 +356,7 @@
           <option value="implant">🔩 รากฟันเทียม</option>
           <option value="scaling">🪥 ขูดหินปูน / สเกลล์</option>
           <option value="denture">🦷 ทำฟันปลอม</option>
+          <option value="scan">🦷 แสกนฟัน (3D Scan)</option>
           <option value="checkup">🔍 ตรวจฟัน / ติดตามผล</option>
           <option value="other">📋 อื่นๆ</option>
         </select>
@@ -408,12 +409,12 @@ let currentView = 'month';
 const PROC_LABELS = {
   aligner:'จัดฟัน Clear Aligner', whitening:'ฟอกสีฟัน', filling:'อุดฟัน',
   extraction:'ถอนฟัน', implant:'รากฟันเทียม', scaling:'ขูดหินปูน',
-  denture:'ทำฟันปลอม', checkup:'ตรวจฟัน', other:'อื่นๆ'
+  denture:'ทำฟันปลอม', scan:'แสกนฟัน (3D Scan)', checkup:'ตรวจฟัน', other:'อื่นๆ'
 };
 const PROC_CLASS = {
   aligner:'proc-aligner', whitening:'proc-whitening', filling:'proc-filling',
   extraction:'proc-extraction', implant:'proc-implant', scaling:'proc-scaling',
-  denture:'proc-denture', checkup:'proc-checkup', other:'proc-other'
+  denture:'proc-denture', scan:'proc-scan', checkup:'proc-checkup', other:'proc-other'
 };
 const STATUS_CHIP = {
   pending:'<span class="status-chip chip-pending">⏳ รอยืนยัน</span>',
@@ -631,7 +632,7 @@ function renderWeekView() {
       (aptMap[key] || []).forEach(a => {
         const dot = document.createElement('div');
         dot.className = 'apt-dot ' + (PROC_CLASS[a.procedure_type] || 'proc-other');
-        dot.style.cssText = 'font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;';
+        dot.style.cssText = 'font-size:10px;overflow:hidden;white-space:nowraw;text-overflow:ellipsis;';
         dot.textContent = a.patient_name;
         dot.onclick = e => { e.stopPropagation(); openEditModal(a); };
         cell.appendChild(dot);
