@@ -52,6 +52,7 @@
     <a href="assessment.html" class="nav-link active">➕ ประเมินฟัน</a>
     <a href="patients.html" class="nav-link">👥 ลูกค้า</a>
     <a href="knowledge.html" class="nav-link">📚 ฐานความรู้</a>
+    <a href="calendar.html" class="nav-link">📅 ปฏิทินนัด</a>
   </div>
 </nav>
 
@@ -290,7 +291,7 @@
     { id: 'right',        label: 'รูปที่ 6', icon: '📷' },
   ];
 
-  // =====+ ��ร้าง Photo Grid =====
+  // ===== สร้าง Photo Grid =====
   function buildPhotoGrid() {
     const grid = document.getElementById('photoGrid');
     grid.innerHTML = PHOTO_SLOTS.map(slot => `
