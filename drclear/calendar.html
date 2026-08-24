@@ -689,7 +689,7 @@ function renderCalendar(){
     if(s===td)  cell.classList.add('is-today');
     if(s===selectedDate) cell.classList.add('selected');
     const dn=parseInt(s.split('-')[2]);
-    cell.innerHTML<`<div class="cell-top"><div class="cell-num">${dn}</div>
+    cell.innerHTML=`<div class="cell-top"><div class="cell-num">${dn}</div>
       <button class="cell-add" onclick="event.stopPropagation();openModal('${s}')">+</button></div>
       <div class="cal-chips" id="chips-${s}"></div>`;
     cell.onclick=()=>openDayPanel(s);grid.appendChild(cell);
