@@ -1,6 +1,7 @@
 <!doctype html>
 <title>ปฏิทินนัดหมาย</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --primary:#1B6FA8; --primary-dark:#154E78; --danger:#E74C3C;
@@ -188,8 +189,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sort-select:focus{outline:none;border-color:var(--primary);}
 
 .btn-new-apt{padding:8px 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;
-  font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto;}
+  font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .btn-new-apt:hover{background:var(--primary-dark);}
+.list-toolbar-actions{display:flex;gap:8px;margin-left:auto;}
+.btn-export-excel{padding:8px 16px;border-radius:8px;background:#1D6F42;color:#fff;border:none;
+  font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  display:flex;align-items:center;gap:6px;}
+.btn-export-excel:hover{background:#155A34;}
+.btn-export-excel:disabled{opacity:.6;cursor:not-allowed;}
 
 /* bulk bar */
 .bulk-bar{display:none;background:color-mix(in srgb,var(--primary) 8%,var(--surface));
@@ -395,7 +402,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <option value="name-asc">ชื่อ A→Z</option>
         <option value="status">จัดตามสถานะ</option>
       </select>
-      <button class="btn-new-apt" onclick="openModal(null)">+ เพิ่มนัดหมาย</button>
+      <div class="list-toolbar-actions">
+        <button class="btn-export-excel" id="btnExportExcel" onclick="exportExcel()">📤 Export Excel</button>
+        <button class="btn-new-apt" onclick="openModal(null)">+ เพิ่มนัดหมาย</button>
+      </div>
     </div>
     <!-- Bulk bar -->
     <div class="bulk-bar" id="bulkBar">
@@ -1075,6 +1085,36 @@ function toast(msg,type='info'){
   wrap.appendChild(el);setTimeout(()=>el.remove(),3200);
 }
 
+// ─── Export to Excel ───────────────────────────────────
+function exportExcel(){
+  if(typeof XLSX==='undefined'){
+    toast('ไม่สามารถโหลดไลบรารี Excel ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่','error');
+    return;
+  }
+  if(!allApts.length){toast('ไม่มีข้อมูลนัดหมายให้ export','error');return;}
+  const rows=allApts.slice().sort((a,b)=>a.date===b.date?(a.time||'').localeCompare(b.time||''):a.date.localeCompare(b.date))
+    .map(a=>({
+      'วันที่':fmtDate(a.date),
+      'เวลา':a.time?a.time.slice(0,5):'',
+      'ชื่อลูกค้า':a.patient_name||'',
+      'ประเภทการรักษา':PROC_LABELS[a.procedure_type]||a.procedure_type||'',
+      'สถานะ':STATUS_PLAIN[a.status]||a.status||'',
+      'ราคา (บาท)':a.price||'',
+      'เบอร์โทร':a.phone||'',
+      'อีเมล':a.email||'',
+      'LINE ID':a.line_id||'',
+      'ที่อยู่':a.address||'',
+      'แหล่งที่มา':SOURCE_LABELS[a.source]||a.source||'',
+      'หมายเหตุ':a.notes||'',
+    }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:8},{wch:20},{wch:20},{wch:12},{wch:11},{wch:14},{wch:22},{wch:14},{wch:26},{wch:14},{wch:26}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'นัดหมาย');
+  const fname='นัดหมาย_'+todayStr()+'.xlsx';
+  XLSX.writeFile(wb,fname);
+  toast(`ดาวน์โหลด ${rows.length} รายการเป็น Excel เรียบร้อย ✅`,'success');
+}
 // ─── Init ─────────────────────────────────────────────
 loadStatusColors();
 showPage('list');
