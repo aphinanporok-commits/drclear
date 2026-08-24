@@ -90,7 +90,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cal-cell:hover .cell-add{visibility:visible;}
 .cell-add:hover{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);}
 .cal-chips{display:flex;flex-direction:column;gap:3px;}
-.apt-chip{height:25px;border-radius:5px;padding:0 7px;font-size:12.5px;font-weight:600;
+.apt-chip{height:25px;border-radius:5px;padding:0 7px;font-size:12.5px;font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;cursor:pointer;}
 .apt-chip:hover{opacity:.8;}
 .apt-chip-time{font-size:10.5px;opacity:.75;flex-shrink:0;}
@@ -177,10 +177,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .status-tab{padding:6px 14px;border-radius:20px;font-family:var(--font);font-size:13px;font-weight:600;
   cursor:pointer;border:2px solid transparent;transition:all .15s;white-space:nowrap;}
 .status-tab.t-all     {background:#EBF5FB;color:#1B6FA8;}
-.status-tab.t-pending {background:#FEF3DC;color:#9B6700;}
-.status-tab.t-confirmed{background:#D4F5E5;color:#1A7A3F;}
-.status-tab.t-done    {background:#D6EAF8;color:#1A4F7A;}
-.status-tab.t-cancelled{background:#FDEDEC;color:#8B2020;}
+.status-tab{background-color:color-mix(in srgb,var(--tab-c,#999) 18%,var(--surface));
+  color:color-mix(in srgb,var(--tab-c,#999) 80%,black);}
+.status-tab.t-all{background-color:#EBF5FB;color:#1B6FA8;}
 .status-tab.active{border-color:currentColor;box-shadow:0 2px 8px rgba(0,0,0,.1);}
 .tab-count{display:inline-flex;align-items:center;justify-content:center;
   background:rgba(0,0,0,.12);border-radius:10px;padding:1px 6px;font-size:11px;margin-left:3px;}
@@ -250,10 +249,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 8px center;transition:all .15s;}
 .pill-sel:focus{outline:none;box-shadow:0 0 0 3px rgba(27,111,168,.15);}
-.pill-sel.s-pending  {background-color:color-mix(in srgb,var(--status-pending) 20%,var(--surface));color:color-mix(in srgb,var(--status-pending) 75%,black);border-color:color-mix(in srgb,var(--status-pending) 55%,var(--surface));}
-.pill-sel.s-confirmed{background-color:color-mix(in srgb,var(--status-confirmed) 20%,var(--surface));color:color-mix(in srgb,var(--status-confirmed) 75%,black);border-color:color-mix(in srgb,var(--status-confirmed) 55%,var(--surface));}
-.pill-sel.s-done     {background-color:color-mix(in srgb,var(--status-done) 20%,var(--surface));color:color-mix(in srgb,var(--status-done) 75%,black);border-color:color-mix(in srgb,var(--status-done) 55%,var(--surface));}
-.pill-sel.s-cancelled{background-color:color-mix(in srgb,var(--status-cancelled) 20%,var(--surface));color:color-mix(in srgb,var(--status-cancelled) 75%,black);border-color:color-mix(in srgb,var(--status-cancelled) 55%,var(--surface));}
+.pill-sel{background-color:color-mix(in srgb,var(--pill-c,#999) 20%,var(--surface));color:color-mix(in srgb,var(--pill-c,#999) 75%,black);border-color:color-mix(in srgb,var(--pill-c,#999) 55%,var(--surface));}
 
 .saved-flash{display:inline-block;padding:1px 7px;border-radius:8px;background:#27AE60;
   color:#fff;font-size:10px;font-weight:700;animation:pop .2s ease;}
@@ -357,6 +353,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   background:transparent;color:#E74C3C;cursor:pointer;font-size:14px;display:flex;align-items:center;
   justify-content:center;transition:background .12s,border-color .12s;}
 .btn-status-delete:hover{background:color-mix(in srgb,#E74C3C 12%,transparent);border-color:#E74C3C;}
+.btn-add-status{margin-top:10px;padding:9px 14px;border-radius:8px;background:transparent;
+  border:1.5px dashed var(--primary);color:var(--primary);font-family:var(--font);font-size:13px;
+  font-weight:700;cursor:pointer;width:100%;transition:background .12s;}
+.btn-add-status:hover{background:color-mix(in srgb,var(--primary) 8%,transparent);}
+.add-status-row{display:flex;gap:8px;align-items:center;padding:10px 0 2px;border-top:1px dashed var(--border);margin-top:8px;}
+.add-status-row input[type=text]{flex:1;}
+.add-status-row input[type=color]{width:38px;height:32px;flex-shrink:0;border:1.5px solid var(--border);
+  border-radius:7px;cursor:pointer;background:none;padding:2px;}
 .settings-actions{display:flex;gap:10px;margin-top:6px;}
 .btn-settings-save{padding:9px 18px;border-radius:8px;background:var(--primary);color:#fff;border:none;
   font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
@@ -482,6 +486,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="settings-card-title">สีสถานะนัดหมาย</div>
       <div class="settings-card-desc">เลือกสีประจำแต่ละสถานะ ระบบจะนำไปใช้กับจุดสถานะ ป้ายสถานะ และตัวเลือกสถานะทั้งหมด</div>
       <div id="colorRowsContainer"></div>
+      <button class="btn-add-status" id="btnShowAddStatus" onclick="showAddStatusForm()">➕ เพิ่มสถานะใหม่</button>
+      <div class="add-status-row" id="addStatusRow" style="display:none;">
+        <input type="text" class="form-input" id="newStatusLabel" placeholder="ชื่อสถานะใหม่ เช่น กำลังรักษา">
+        <input type="color" id="newStatusColor" value="#8E44AD">
+        <button class="btn-settings-save" onclick="confirmAddStatus()">✔ เพิ่ม</button>
+        <button class="btn-settings-reset" onclick="cancelAddStatus()">ยกเลิก</button>
+      </div>
       <div class="settings-actions">
         <button class="btn-settings-save" onclick="saveStatusColors()">💾 บันทึกสี</button>
         <button class="btn-settings-reset" onclick="resetStatusColors()">↺ ค่าเริ่มต้น (คืนสถานะที่ลบด้วย)</button>
@@ -619,6 +630,46 @@ const STATUS_PLAIN={pending:'รอยืนยัน',confirmed:'ยืนย�
 const STATUS_COLORS_DEFAULT={pending:'#F39C12',confirmed:'#27AE60',done:'#2980B9',cancelled:'#E74C3C'};
 const STATUS_ORDER_DEFAULT=['pending','confirmed','done','cancelled'];
 const STATUS_ID_SUFFIX={pending:'Pending',confirmed:'Confirmed',done:'Done',cancelled:'Cancelled'};
+// ─── Custom statuses (persisted beyond the fixed 4) ───
+function loadCustomStatuses(){
+  try{
+    const saved=localStorage.getItem('customStatuses');
+    if(saved){
+      const arr=JSON.parse(saved);
+      if(Array.isArray(arr)) arr.forEach(cs=>{
+        if(cs&&cs.key&&cs.label){
+          STATUS_LBL[cs.key]=cs.label;
+          STATUS_PLAIN[cs.key]=cs.label;
+          STATUS_COLORS_DEFAULT[cs.key]=cs.color||'#8E44AD';
+          STATUS_ID_SUFFIX[cs.key]=cs.key;
+        }
+      });
+    }
+  }catch(e){}
+}
+function saveCustomStatuses(){
+  const custom=activeStatuses.filter(k=>!STATUS_ORDER_DEFAULT.includes(k))
+    .map(k=>({key:k,label:STATUS_PLAIN[k]||k,color:STATUS_COLORS_DEFAULT[k]||'#8E44AD'}));
+  try{localStorage.setItem('customStatuses',JSON.stringify(custom));}catch(e){}
+}
+loadCustomStatuses();
+// ─── Vivid color helpers (for status-based chip/dot coloring) ───
+function hexToRgb(hex){
+  hex=(hex||'').trim().replace('#','');
+  if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+  const num=parseInt(hex,16);
+  if(isNaN(num)) return {r:153,g:153,b:153};
+  return {r:(num>>16)&255,g:(num>>8)&255,b:num&255};
+}
+function contrastText(hex){
+  const {r,g,b}=hexToRgb(hex);
+  const lum=(0.299*r+0.587*g+0.114*b)/255;
+  return lum>0.6?'#1a1a1a':'#ffffff';
+}
+function statusColorValue(key){
+  const v=getComputedStyle(document.documentElement).getPropertyValue('--status-'+key).trim();
+  return v||STATUS_COLORS_DEFAULT[key]||'#999999';
+}
 function applyStatusColors(colors){
   const root=document.documentElement;
   Object.keys(STATUS_COLORS_DEFAULT).forEach(k=>{
@@ -637,7 +688,7 @@ function loadStatusColors(){
 function loadActiveStatuses(){
   try{
     const saved=localStorage.getItem('activeStatuses');
-    if(saved){const arr=JSON.parse(saved);if(Array.isArray(arr)&&arr.length) return arr.filter(k=>STATUS_ORDER_DEFAULT.includes(k));}
+    if(saved){const arr=JSON.parse(saved);if(Array.isArray(arr)&&arr.length) return arr.filter(k=>STATUS_PLAIN[k]!==undefined);}
   }catch(e){}
   return STATUS_ORDER_DEFAULT.slice();
 }
@@ -698,12 +749,17 @@ function saveStatusColors(){
   toast('บันทึกสีสถานะเรียบร้อย ✅','success');
 }
 function resetStatusColors(){
-  try{localStorage.removeItem('statusColors');localStorage.removeItem('activeStatuses');}catch(e){}
+  const customKeys=Object.keys(STATUS_PLAIN).filter(k=>!STATUS_ORDER_DEFAULT.includes(k));
+  if(customKeys.length){
+    allApts.forEach(a=>{if(customKeys.includes(a.status)) a.status='pending';});
+    customKeys.forEach(k=>{delete STATUS_LBL[k];delete STATUS_PLAIN[k];delete STATUS_COLORS_DEFAULT[k];delete STATUS_ID_SUFFIX[k];});
+  }
+  try{localStorage.removeItem('statusColors');localStorage.removeItem('activeStatuses');localStorage.removeItem('customStatuses');}catch(e){}
   activeStatuses=STATUS_ORDER_DEFAULT.slice();
   applyStatusColors(STATUS_COLORS_DEFAULT);
   populateColorInputs(STATUS_COLORS_DEFAULT);
-  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();
-  toast('รีเซ็ตสถานะและสีเป็นค่าเริ่มต้นทั้งหมด','info');
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();
+  toast('รีเซ็ตสถานะและสีเป็นค่าเริ่มต้นทั้งหมด (รวมลบสถานะที่สร้างเอง)','info');
 }
 function deleteStatus(key){
   if(activeStatuses.length<=1){toast('ต้องมีอย่างน้อย 1 สถานะในระบบ','error');return;}
@@ -719,9 +775,48 @@ function deleteStatus(key){
   }
   activeStatuses=activeStatuses.filter(k=>k!==key);
   saveActiveStatuses();
+  saveCustomStatuses();
   refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();
   populateColorInputs(loadStatusColors());
   toast(`ลบสถานะ "${label}" แล้ว`,'success');
+}
+function showAddStatusForm(){
+  document.getElementById('addStatusRow').style.display='flex';
+  document.getElementById('btnShowAddStatus').style.display='none';
+  document.getElementById('newStatusLabel').focus();
+}
+function cancelAddStatus(){
+  document.getElementById('addStatusRow').style.display='none';
+  document.getElementById('btnShowAddStatus').style.display='block';
+  document.getElementById('newStatusLabel').value='';
+  document.getElementById('newStatusColor').value='#8E44AD';
+}
+function confirmAddStatus(){
+  const label=document.getElementById('newStatusLabel').value.trim();
+  const color=document.getElementById('newStatusColor').value||'#8E44AD';
+  if(!label){toast('กรุณาใส่ชื่อสถานะ','error');return;}
+  addStatus(label,color);
+  cancelAddStatus();
+}
+function addStatus(label,color){
+  label=(label||'').trim();
+  if(!label)return;
+  color=color||'#8E44AD';
+  const key='custom'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  STATUS_LBL[key]=label;
+  STATUS_PLAIN[key]=label;
+  STATUS_COLORS_DEFAULT[key]=color;
+  STATUS_ID_SUFFIX[key]=key;
+  activeStatuses.push(key);
+  saveActiveStatuses();
+  saveCustomStatuses();
+  const colors=loadStatusColors();
+  colors[key]=color;
+  try{localStorage.setItem('statusColors',JSON.stringify(colors));}catch(e){}
+  applyStatusColors(colors);
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();
+  populateColorInputs(colors);
+  toast(`เพิ่มสถานะ "${label}" แล้ว ✅`,'success');
 }
 document.addEventListener('input',e=>{
   if(e.target.matches('.color-row input[type=color]')) updateColorPreviews();
@@ -810,7 +905,7 @@ function renderStatusTabs(){
   const tabs=[{k:'all',label:'ทั้งหมด'}].concat(activeStatuses.map(k=>({k,label:STATUS_PLAIN[k]||k})));
   if(activeFilter!=='all'&&!activeStatuses.includes(activeFilter)) activeFilter='all';
   document.getElementById('statusTabs').innerHTML=tabs.map(t=>`
-    <button class="status-tab t-${t.k} ${activeFilter===t.k?'active':''}" onclick="setFilter('${t.k}')">
+    <button class="status-tab ${t.k==='all'?'t-all':''} ${activeFilter===t.k?'active':''}" ${t.k==='all'?'':`style="--tab-c:var(--status-${t.k})"`} onclick="setFilter('${t.k}')">
       ${t.label}<span class="tab-count">${counts[t.k]}</span>
     </button>`).join('');
 }
@@ -895,7 +990,7 @@ function aptCard(apt){
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       ${apt.price?`<span style="font-size:13px;font-weight:700;color:var(--text-muted);white-space:nowrap;">฿${Number(apt.price).toLocaleString()}</span>`:''}
       <div style="position:relative;">
-        <select class="pill-sel s-${apt.status}" data-id="${apt.id}" onchange="changeStatus('${apt.id}',this)">
+        <select class="pill-sel" style="--pill-c:var(--status-${apt.status})" data-id="${apt.id}" onchange="changeStatus('${apt.id}',this)">
           ${statusOptionsHTML(apt.status,null)}
         </select>
       </div>
@@ -908,7 +1003,7 @@ function aptCard(apt){
 function changeStatus(id,sel){
   const apt=allApts.find(a=>a.id===id);if(!apt)return;
   apt.status=sel.value;
-  sel.className='pill-sel s-'+sel.value;
+  sel.style.setProperty('--pill-c','var(--status-'+sel.value+')');
   toast(`${apt.patient_name} → ${STATUS_PLAIN[sel.value]} ✅`,'success');
   renderStatusTabs();renderList();updateStats();
 }
@@ -962,7 +1057,11 @@ function renderCalendar(){
     const MAX_CHIPS=5;
     apts.slice(0,MAX_CHIPS).forEach(apt=>{
       const chip=document.createElement('div');
-      chip.className='apt-chip '+(PROC_CLASS[apt.procedure_type]||'pc-other');
+      chip.className='apt-chip';
+      const chipColor=statusColorValue(apt.status);
+      chip.style.background=chipColor;
+      chip.style.color=contrastText(chipColor);
+      chip.title=STATUS_PLAIN[apt.status]||apt.status;
       chip.innerHTML=`<span class="apt-chip-time">${apt.time?apt.time.slice(0,5):''}</span>${apt.patient_name}`;
       chip.onclick=e=>{e.stopPropagation();openModal(s,apt);};ch.appendChild(chip);
     });
@@ -1042,7 +1141,7 @@ function openDayPanel(s){
           <div class="apt-name">${apt.patient_name}</div>
           <div class="apt-sub">${PROC_LABELS[apt.procedure_type]||''}${apt.price?' · ฿'+Number(apt.price).toLocaleString():''}${apt.source?' · '+(SOURCE_LABELS[apt.source]||apt.source):''}</div>
         </div>
-        <div class="apt-status-dot ${STATUS_DOT[apt.status]||'dot-pending'}"></div>
+        <div class="apt-status-dot" style="background:var(--status-${apt.status},#F39C12)"></div>
       </div>`).join('');
   }
   document.getElementById('dayPanel').classList.add('open');
