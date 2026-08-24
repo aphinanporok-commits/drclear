@@ -353,6 +353,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .color-row input[type=color]{width:38px;height:32px;border:1.5px solid var(--border);border-radius:7px;
   cursor:pointer;background:none;padding:2px;}
 .color-row-preview{padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;}
+.btn-status-delete{width:32px;height:32px;flex-shrink:0;border-radius:7px;border:1.5px solid var(--border);
+  background:transparent;color:#E74C3C;cursor:pointer;font-size:14px;display:flex;align-items:center;
+  justify-content:center;transition:background .12s,border-color .12s;}
+.btn-status-delete:hover{background:color-mix(in srgb,#E74C3C 12%,transparent);border-color:#E74C3C;}
 .settings-actions{display:flex;gap:10px;margin-top:6px;}
 .btn-settings-save{padding:9px 18px;border-radius:8px;background:var(--primary);color:#fff;border:none;
   font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
@@ -477,29 +481,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="settings-card">
       <div class="settings-card-title">สีสถานะนัดหมาย</div>
       <div class="settings-card-desc">เลือกสีประจำแต่ละสถานะ ระบบจะนำไปใช้กับจุดสถานะ ป้ายสถานะ และตัวเลือกสถานะทั้งหมด</div>
-      <div class="color-row">
-        <span class="color-row-label">⏳ รอยืนยัน</span>
-        <span class="color-row-preview" id="previewPending">ตัวอย่าง</span>
-        <input type="color" id="colorPending" data-status="pending">
-      </div>
-      <div class="color-row">
-        <span class="color-row-label">✅ ยืนยันแล้ว</span>
-        <span class="color-row-preview" id="previewConfirmed">ตัวอย่าง</span>
-        <input type="color" id="colorConfirmed" data-status="confirmed">
-      </div>
-      <div class="color-row">
-        <span class="color-row-label">🏁 เสร็จแล้ว</span>
-        <span class="color-row-preview" id="previewDone">ตัวอย่าง</span>
-        <input type="color" id="colorDone" data-status="done">
-      </div>
-      <div class="color-row">
-        <span class="color-row-label">❌ ยกเลิก</span>
-        <span class="color-row-preview" id="previewCancelled">ตัวอย่าง</span>
-        <input type="color" id="colorCancelled" data-status="cancelled">
-      </div>
+      <div id="colorRowsContainer"></div>
       <div class="settings-actions">
         <button class="btn-settings-save" onclick="saveStatusColors()">💾 บันทึกสี</button>
-        <button class="btn-settings-reset" onclick="resetStatusColors()">↺ ค่าเริ่มต้น</button>
+        <button class="btn-settings-reset" onclick="resetStatusColors()">↺ ค่าเริ่มต้น (คืนสถานะที่ลบด้วย)</button>
       </div>
     </div>
   </div>
@@ -632,6 +617,8 @@ const STATUS_DOT={confirmed:'dot-confirmed',pending:'dot-pending',done:'dot-done
 const STATUS_LBL={pending:'⏳ รอยืนยัน',confirmed:'✅ ยืนยันแล้ว',done:'🏁 เสร็จแล้ว',cancelled:'❌ ยกเลิก'};
 const STATUS_PLAIN={pending:'รอยืนยัน',confirmed:'ยืนยันแล้ว',done:'เสร็จแล้ว',cancelled:'ยกเลิก'};
 const STATUS_COLORS_DEFAULT={pending:'#F39C12',confirmed:'#27AE60',done:'#2980B9',cancelled:'#E74C3C'};
+const STATUS_ORDER_DEFAULT=['pending','confirmed','done','cancelled'];
+const STATUS_ID_SUFFIX={pending:'Pending',confirmed:'Confirmed',done:'Done',cancelled:'Cancelled'};
 function applyStatusColors(colors){
   const root=document.documentElement;
   Object.keys(STATUS_COLORS_DEFAULT).forEach(k=>{
@@ -647,37 +634,94 @@ function loadStatusColors(){
   applyStatusColors(colors);
   return colors;
 }
+function loadActiveStatuses(){
+  try{
+    const saved=localStorage.getItem('activeStatuses');
+    if(saved){const arr=JSON.parse(saved);if(Array.isArray(arr)&&arr.length) return arr.filter(k=>STATUS_ORDER_DEFAULT.includes(k));}
+  }catch(e){}
+  return STATUS_ORDER_DEFAULT.slice();
+}
+function saveActiveStatuses(){
+  try{localStorage.setItem('activeStatuses',JSON.stringify(activeStatuses));}catch(e){}
+}
+let activeStatuses=loadActiveStatuses();
+function statusOptionsHTML(selectedKey,blankLabel){
+  let html=blankLabel?`<option value="">${blankLabel}</option>`:'';
+  activeStatuses.forEach(k=>{html+=`<option value="${k}" ${k===selectedKey?'selected':''}>${STATUS_LBL[k]}</option>`;});
+  return html;
+}
+function refreshStatusSelects(){
+  const fStatus=document.getElementById('fStatus');
+  if(fStatus){const cur=fStatus.value;fStatus.innerHTML=statusOptionsHTML(null,null);if(activeStatuses.includes(cur))fStatus.value=cur;}
+  const bulkStatus=document.getElementById('bulkStatus');
+  if(bulkStatus){bulkStatus.innerHTML=statusOptionsHTML(null,'เปลี่ยนสถานะเป็น...');}
+}
+function renderStatusSettingsRows(){
+  const box=document.getElementById('colorRowsContainer');
+  if(!box)return;
+  box.innerHTML=activeStatuses.map(k=>{
+    const suf=STATUS_ID_SUFFIX[k];
+    return `<div class="color-row" data-status="${k}">
+      <span class="color-row-label">${STATUS_LBL[k]}</span>
+      <span class="color-row-preview" id="preview${suf}">ตัวอย่าง</span>
+      <input type="color" id="color${suf}" data-status="${k}">
+      <button class="btn-status-delete" title="ลบสถานะนี้" onclick="deleteStatus('${k}')">🗑</button>
+    </div>`;
+  }).join('') || `<div class="settings-card-desc">ไม่มีสถานะเหลืออยู่ กด "ค่าเริ่มต้น" เพื่อคืนสถานะทั้งหมด</div>`;
+}
 function populateColorInputs(colors){
-  document.getElementById('colorPending').value=colors.pending;
-  document.getElementById('colorConfirmed').value=colors.confirmed;
-  document.getElementById('colorDone').value=colors.done;
-  document.getElementById('colorCancelled').value=colors.cancelled;
+  renderStatusSettingsRows();
+  activeStatuses.forEach(k=>{
+    const el=document.getElementById('color'+STATUS_ID_SUFFIX[k]);
+    if(el) el.value=colors[k]||STATUS_COLORS_DEFAULT[k];
+  });
   updateColorPreviews();
 }
 function updateColorPreviews(){
-  ['Pending','Confirmed','Done','Cancelled'].forEach(k=>{
-    const input=document.getElementById('color'+k);
-    const preview=document.getElementById('preview'+k);
+  activeStatuses.forEach(k=>{
+    const suf=STATUS_ID_SUFFIX[k];
+    const input=document.getElementById('color'+suf);
+    const preview=document.getElementById('preview'+suf);
+    if(!input||!preview)return;
     preview.style.background=input.value;
     preview.style.color='#fff';
   });
 }
 function saveStatusColors(){
-  const colors={
-    pending:document.getElementById('colorPending').value,
-    confirmed:document.getElementById('colorConfirmed').value,
-    done:document.getElementById('colorDone').value,
-    cancelled:document.getElementById('colorCancelled').value,
-  };
+  const colors=Object.assign({},STATUS_COLORS_DEFAULT);
+  activeStatuses.forEach(k=>{
+    const el=document.getElementById('color'+STATUS_ID_SUFFIX[k]);
+    if(el) colors[k]=el.value;
+  });
   try{localStorage.setItem('statusColors',JSON.stringify(colors));}catch(e){}
   applyStatusColors(colors);
   toast('บันทึกสีสถานะเรียบร้อย ✅','success');
 }
 function resetStatusColors(){
-  try{localStorage.removeItem('statusColors');}catch(e){}
+  try{localStorage.removeItem('statusColors');localStorage.removeItem('activeStatuses');}catch(e){}
+  activeStatuses=STATUS_ORDER_DEFAULT.slice();
   applyStatusColors(STATUS_COLORS_DEFAULT);
   populateColorInputs(STATUS_COLORS_DEFAULT);
-  toast('รีเซ็ตสีสถานะเป็นค่าเริ่มต้น','info');
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();
+  toast('รีเซ็ตสถานะและสีเป็นค่าเริ่มต้นทั้งหมด','info');
+}
+function deleteStatus(key){
+  if(activeStatuses.length<=1){toast('ต้องมีอย่างน้อย 1 สถานะในระบบ','error');return;}
+  const inUse=allApts.filter(a=>a.status===key);
+  const label=STATUS_PLAIN[key]||key;
+  if(inUse.length>0){
+    const fallback=activeStatuses.find(k=>k!==key);
+    const ok=confirm(`มีนัดหมาย ${inUse.length} รายการที่ใช้สถานะ "${label}" อยู่\nหากลบ ระบบจะเปลี่ยนรายการเหล่านั้นเป็นสถานะ "${STATUS_PLAIN[fallback]}" แทน\n\nต้องการลบสถานะ "${label}" ถาวรหรือไม่?`);
+    if(!ok)return;
+    inUse.forEach(a=>{a.status=fallback;});
+  }else{
+    if(!confirm(`ต้องการลบสถานะ "${label}" ถาวรหรือไม่?`))return;
+  }
+  activeStatuses=activeStatuses.filter(k=>k!==key);
+  saveActiveStatuses();
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();
+  populateColorInputs(loadStatusColors());
+  toast(`ลบสถานะ "${label}" แล้ว`,'success');
 }
 document.addEventListener('input',e=>{
   if(e.target.matches('.color-row input[type=color]')) updateColorPreviews();
@@ -760,15 +804,11 @@ function updateStats(){
 
 // ─── Status tabs ──────────────────────────────────────
 function renderStatusTabs(){
-  const counts={all:0,pending:0,confirmed:0,done:0,cancelled:0};
+  const counts={all:0};
+  activeStatuses.forEach(k=>counts[k]=0);
   allApts.forEach(a=>{counts.all++;if(counts[a.status]!==undefined)counts[a.status]++;});
-  const tabs=[
-    {k:'all',     label:'ทั้งหมด'},
-    {k:'pending', label:'รอยืนยัน'},
-    {k:'confirmed',label:'ยืนยันแล้ว'},
-    {k:'done',    label:'เสร็จแล้ว'},
-    {k:'cancelled',label:'ยกเลิก'},
-  ];
+  const tabs=[{k:'all',label:'ทั้งหมด'}].concat(activeStatuses.map(k=>({k,label:STATUS_PLAIN[k]||k})));
+  if(activeFilter!=='all'&&!activeStatuses.includes(activeFilter)) activeFilter='all';
   document.getElementById('statusTabs').innerHTML=tabs.map(t=>`
     <button class="status-tab t-${t.k} ${activeFilter===t.k?'active':''}" onclick="setFilter('${t.k}')">
       ${t.label}<span class="tab-count">${counts[t.k]}</span>
@@ -856,10 +896,7 @@ function aptCard(apt){
       ${apt.price?`<span style="font-size:13px;font-weight:700;color:var(--text-muted);white-space:nowrap;">฿${Number(apt.price).toLocaleString()}</span>`:''}
       <div style="position:relative;">
         <select class="pill-sel s-${apt.status}" data-id="${apt.id}" onchange="changeStatus('${apt.id}',this)">
-          <option value="pending"   ${apt.status==='pending'   ?'selected':''}>⏳ รอยืนยัน</option>
-          <option value="confirmed" ${apt.status==='confirmed' ?'selected':''}>✅ ยืนยันแล้ว</option>
-          <option value="done"      ${apt.status==='done'      ?'selected':''}>🏁 เสร็จแล้ว</option>
-          <option value="cancelled" ${apt.status==='cancelled' ?'selected':''}>❌ ยกเลิก</option>
+          ${statusOptionsHTML(apt.status,null)}
         </select>
       </div>
       <button class="apt-card-edit" onclick='openModal(null,${JSON.stringify(apt).replace(/'/g,"&#39;")})'>✏️ แก้ไข</button>
@@ -1126,5 +1163,6 @@ function exportExcel(){
 }
 // ─── Init ─────────────────────────────────────────────
 loadStatusColors();
+refreshStatusSelects();
 showPage('list');
 </script>
