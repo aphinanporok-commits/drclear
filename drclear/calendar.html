@@ -9,6 +9,7 @@
   --cal-border:#E8ECF0; --cal-head-bg:#F7F9FC;
   --cal-other:#BCC5CF; --chip-h:22px;
   --bg:#F4F7FA; --surface:#fff; --navbar-bg:#1B6FA8;
+  --status-pending:#F39C12; --status-confirmed:#27AE60; --status-done:#2980B9; --status-cancelled:#E74C3C;
 }
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
@@ -66,18 +67,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);
   background:var(--cal-head-bg);border-bottom:1px solid var(--cal-border);}
-.cal-wd{text-align:center;padding:5px;font-size:11px;font-weight:700;color:#8A9BAE;letter-spacing:.5px;}
+.cal-wd{text-align:center;padding:10px 4px;font-size:13px;font-weight:800;color:#8A9BAE;letter-spacing:.5px;}
 .cal-wd:first-child{color:#E74C3C;}.cal-wd:last-child{color:#2980B9;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--cal-border);gap:1px;}
-.cal-cell{background:var(--surface);min-height:64px;padding:3px 3px 3px;cursor:pointer;transition:background .12s;position:relative;}
+.cal-cell{background:var(--surface);min-height:132px;padding:7px 8px 6px;cursor:pointer;transition:background .12s;position:relative;}
 .cal-cell:hover{background:var(--cal-head-bg);}
 .cal-cell.other-month{background:color-mix(in srgb,var(--surface) 60%,var(--bg) 40%);}
 .cal-cell.other-month .cell-num{color:var(--cal-other);}
 .cal-cell.is-today .cell-num{background:var(--primary);color:#fff!important;border-radius:50%;
-  width:19px;height:19px;display:flex;align-items:center;justify-content:center;}
+  width:25px;height:25px;display:flex;align-items:center;justify-content:center;}
 .cal-cell.selected{background:color-mix(in srgb,var(--primary) 8%,var(--surface));}
 .cell-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
-.cell-num{font-size:11px;font-weight:700;color:var(--text);line-height:1;}
+.cell-num{font-size:15px;font-weight:800;color:var(--text);line-height:1;}
 .cal-cell.other-month .cell-num{color:var(--cal-other)!important;}
 .cal-cell:nth-child(7n+1) .cell-num{color:#E74C3C;}
 .cal-cell:nth-child(7n) .cell-num{color:#2980B9;}
@@ -87,7 +88,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cal-cell:hover .cell-add{display:flex;}
 .cell-add:hover{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);}
 .cal-chips{display:flex;flex-direction:column;gap:2px;}
-.apt-chip{height:18px;border-radius:4px;padding:0 5px;font-size:10px;font-weight:600;
+.apt-chip{height:21px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:600;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;cursor:pointer;}
 .apt-chip:hover{opacity:.8;}
 .apt-chip-time{font-size:9px;opacity:.75;flex-shrink:0;}
@@ -147,8 +148,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .apt-name{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .apt-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
 .apt-status-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;}
-.dot-confirmed{background:#27AE60;}.dot-pending{background:#F39C12;}
-.dot-done{background:#2980B9;}.dot-cancelled{background:#E74C3C;}
+.dot-confirmed{background:var(--status-confirmed);}.dot-pending{background:var(--status-pending);}
+.dot-done{background:var(--status-done);}.dot-cancelled{background:var(--status-cancelled);}
 .panel-empty{text-align:center;padding:36px 16px;color:var(--text-muted);font-size:14px;}
 .panel-empty-icon{font-size:34px;margin-bottom:8px;}
 
@@ -241,10 +242,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 8px center;transition:all .15s;}
 .pill-sel:focus{outline:none;box-shadow:0 0 0 3px rgba(27,111,168,.15);}
-.pill-sel.s-pending  {background-color:#FEF3DC;color:#9B6700;border-color:#F0C060;}
-.pill-sel.s-confirmed{background-color:#D4F5E5;color:#1A7A3F;border-color:#74D9A4;}
-.pill-sel.s-done     {background-color:#D6EAF8;color:#1A4F7A;border-color:#74B3DC;}
-.pill-sel.s-cancelled{background-color:#FDEDEC;color:#8B2020;border-color:#F4A09A;}
+.pill-sel.s-pending  {background-color:color-mix(in srgb,var(--status-pending) 20%,var(--surface));color:color-mix(in srgb,var(--status-pending) 75%,black);border-color:color-mix(in srgb,var(--status-pending) 55%,var(--surface));}
+.pill-sel.s-confirmed{background-color:color-mix(in srgb,var(--status-confirmed) 20%,var(--surface));color:color-mix(in srgb,var(--status-confirmed) 75%,black);border-color:color-mix(in srgb,var(--status-confirmed) 55%,var(--surface));}
+.pill-sel.s-done     {background-color:color-mix(in srgb,var(--status-done) 20%,var(--surface));color:color-mix(in srgb,var(--status-done) 75%,black);border-color:color-mix(in srgb,var(--status-done) 55%,var(--surface));}
+.pill-sel.s-cancelled{background-color:color-mix(in srgb,var(--status-cancelled) 20%,var(--surface));color:color-mix(in srgb,var(--status-cancelled) 75%,black);border-color:color-mix(in srgb,var(--status-cancelled) 55%,var(--surface));}
 
 .saved-flash{display:inline-block;padding:1px 7px;border-radius:8px;background:#27AE60;
   color:#fff;font-size:10px;font-weight:700;animation:pop .2s ease;}
@@ -302,6 +303,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .toast.success{background:#27AE60;color:#fff;}.toast.error{background:#E74C3C;color:#fff;}.toast.info{background:var(--primary);color:#fff;}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+/* ══════════ SETTINGS PAGE ══════════ */
+.settings-wrap{max-width:640px;margin:0 auto;padding:28px 20px 60px;}
+.settings-title{font-size:20px;font-weight:800;margin-bottom:4px;}
+.settings-subtitle{font-size:13px;color:var(--text-muted);margin-bottom:22px;}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow);}
+.settings-card-title{font-size:14px;font-weight:800;margin-bottom:3px;}
+.settings-card-desc{font-size:12px;color:var(--text-muted);margin-bottom:14px;}
+.color-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);}
+.color-row:last-of-type{border-bottom:none;}
+.color-row-label{flex:1;font-size:13px;font-weight:600;}
+.color-row input[type=color]{width:38px;height:32px;border:1.5px solid var(--border);border-radius:7px;
+  cursor:pointer;background:none;padding:2px;}
+.color-row-preview{padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;}
+.settings-actions{display:flex;gap:10px;margin-top:6px;}
+.btn-settings-save{padding:9px 18px;border-radius:8px;background:var(--primary);color:#fff;border:none;
+  font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
+.btn-settings-save:hover{background:var(--primary-dark);}
+.btn-settings-reset{padding:9px 18px;border-radius:8px;background:transparent;color:var(--text-muted);
+  border:1.5px solid var(--border);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
+.btn-settings-reset:hover{background:var(--cal-head-bg);}
+
 </style>
 
 <!-- ══════════ NAVBAR ══════════ -->
@@ -316,6 +339,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="navbar-nav">
     <button class="nav-btn" id="nav-list"     onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="nav-btn" id="nav-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
+    <button class="nav-btn" id="nav-settings"  onclick="showPage('settings')">⚙️ ตั้งค่า</button>
   </div>
 </nav>
 
@@ -380,6 +404,42 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="cal-wd">พ</div><div class="cal-wd">พฤ</div><div class="cal-wd">ศ</div><div class="cal-wd">ส</div>
   </div>
   <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<!-- ══════════ SETTINGS PAGE ══════════ -->
+<div class="page" id="page-settings">
+  <div class="settings-wrap">
+    <div class="settings-title">ตั้งค่าระบบ</div>
+    <div class="settings-subtitle">ปรับแต่งสีสถานะนัดหมายให้เข้ากับสไตล์ของคลินิก</div>
+    <div class="settings-card">
+      <div class="settings-card-title">สีสถานะนัดหมาย</div>
+      <div class="settings-card-desc">เลือกสีประจำแต่ละสถานะ ระบบจะนำไปใช้กับจุดสถานะ ป้ายสถานะ และตัวเลือกสถานะทั้งหมด</div>
+      <div class="color-row">
+        <span class="color-row-label">⏳ รอยืนยัน</span>
+        <span class="color-row-preview" id="previewPending">ตัวอย่าง</span>
+        <input type="color" id="colorPending" data-status="pending">
+      </div>
+      <div class="color-row">
+        <span class="color-row-label">✅ ยืนยันแล้ว</span>
+        <span class="color-row-preview" id="previewConfirmed">ตัวอย่าง</span>
+        <input type="color" id="colorConfirmed" data-status="confirmed">
+      </div>
+      <div class="color-row">
+        <span class="color-row-label">🏁 เสร็จแล้ว</span>
+        <span class="color-row-preview" id="previewDone">ตัวอย่าง</span>
+        <input type="color" id="colorDone" data-status="done">
+      </div>
+      <div class="color-row">
+        <span class="color-row-label">❌ ยกเลิก</span>
+        <span class="color-row-preview" id="previewCancelled">ตัวอย่าง</span>
+        <input type="color" id="colorCancelled" data-status="cancelled">
+      </div>
+      <div class="settings-actions">
+        <button class="btn-settings-save" onclick="saveStatusColors()">💾 บันทึกสี</button>
+        <button class="btn-settings-reset" onclick="resetStatusColors()">↺ ค่าเริ่มต้น</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Day Panel -->
@@ -453,6 +513,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <label class="form-label">เบอร์โทร</label>
         <input class="form-input" id="fPhone" placeholder="08x-xxx-xxxx">
       </div>
+      <div class="form-row-2">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">อีเมล</label>
+          <input class="form-input" type="email" id="fEmail" placeholder="name@email.com">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">LINE ID</label>
+          <input class="form-input" id="fLine" placeholder="LINE ID">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">ที่อยู่</label>
+        <input class="form-input" id="fAddress" placeholder="ที่อยู่ลูกค้า...">
+      </div>
+      <div class="form-row">
+        <label class="form-label">แหล่งที่มา</label>
+        <select class="form-select" id="fSource">
+          <option value="">– ไม่ระบุ –</option>
+          <option value="walkin">🚶 Walk-in</option>
+          <option value="facebook">📘 Facebook</option>
+          <option value="instagram">📸 Instagram</option>
+          <option value="line">💬 LINE OA</option>
+          <option value="google">🔍 Google</option>
+          <option value="referral">🗣️ บอกต่อ/แนะนำ</option>
+          <option value="other">📋 อื่นๆ</option>
+        </select>
+      </div>
       <div class="form-row">
         <label class="form-label">หมายเหตุ</label>
         <textarea class="form-textarea" id="fNotes" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
@@ -479,6 +566,58 @@ const PROC_CLASS={aligner:'pc-aligner',whitening:'pc-whitening',filling:'pc-fill
 const STATUS_DOT={confirmed:'dot-confirmed',pending:'dot-pending',done:'dot-done',cancelled:'dot-cancelled'};
 const STATUS_LBL={pending:'⏳ รอยืนยัน',confirmed:'✅ ยืนยันแล้ว',done:'🏁 เสร็จแล้ว',cancelled:'❌ ยกเลิก'};
 const STATUS_PLAIN={pending:'รอยืนยัน',confirmed:'ยืนยันแล้ว',done:'เสร็จแล้ว',cancelled:'ยกเลิก'};
+const STATUS_COLORS_DEFAULT={pending:'#F39C12',confirmed:'#27AE60',done:'#2980B9',cancelled:'#E74C3C'};
+function applyStatusColors(colors){
+  const root=document.documentElement;
+  Object.keys(STATUS_COLORS_DEFAULT).forEach(k=>{
+    root.style.setProperty('--status-'+k,(colors&&colors[k])||STATUS_COLORS_DEFAULT[k]);
+  });
+}
+function loadStatusColors(){
+  let colors=STATUS_COLORS_DEFAULT;
+  try{
+    const saved=localStorage.getItem('statusColors');
+    if(saved) colors=Object.assign({},STATUS_COLORS_DEFAULT,JSON.parse(saved));
+  }catch(e){}
+  applyStatusColors(colors);
+  return colors;
+}
+function populateColorInputs(colors){
+  document.getElementById('colorPending').value=colors.pending;
+  document.getElementById('colorConfirmed').value=colors.confirmed;
+  document.getElementById('colorDone').value=colors.done;
+  document.getElementById('colorCancelled').value=colors.cancelled;
+  updateColorPreviews();
+}
+function updateColorPreviews(){
+  ['Pending','Confirmed','Done','Cancelled'].forEach(k=>{
+    const input=document.getElementById('color'+k);
+    const preview=document.getElementById('preview'+k);
+    preview.style.background=input.value;
+    preview.style.color='#fff';
+  });
+}
+function saveStatusColors(){
+  const colors={
+    pending:document.getElementById('colorPending').value,
+    confirmed:document.getElementById('colorConfirmed').value,
+    done:document.getElementById('colorDone').value,
+    cancelled:document.getElementById('colorCancelled').value,
+  };
+  try{localStorage.setItem('statusColors',JSON.stringify(colors));}catch(e){}
+  applyStatusColors(colors);
+  toast('บันทึกสีสถานะเรียบร้อย ✅','success');
+}
+function resetStatusColors(){
+  try{localStorage.removeItem('statusColors');}catch(e){}
+  applyStatusColors(STATUS_COLORS_DEFAULT);
+  populateColorInputs(STATUS_COLORS_DEFAULT);
+  toast('รีเซ็ตสีสถานะเป็นค่าเริ่มต้น','info');
+}
+document.addEventListener('input',e=>{
+  if(e.target.matches('.color-row input[type=color]')) updateColorPreviews();
+});
+const SOURCE_LABELS={walkin:'Walk-in',facebook:'Facebook',instagram:'Instagram',line:'LINE OA',google:'Google',referral:'บอกต่อ/แนะนำ',other:'อื่นๆ'};
 const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const DAY_NAMES=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
@@ -522,6 +661,7 @@ function showPage(name){
   document.getElementById('nav-'+name).classList.add('active');
   if(name==='list'){selectedIds.clear();renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
+  if(name==='settings'){populateColorInputs(loadStatusColors());}
 }
 
 // ─── Helpers ──────────────────────────────────────────
@@ -642,6 +782,7 @@ function aptCard(apt){
         <span class="${PROC_CLASS[apt.procedure_type]||'pc-other'}" style="padding:2px 7px;border-radius:5px;font-size:11px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
         ${apt.phone?`<span style="font-size:12px;color:var(--text-muted);">📞 ${apt.phone}</span>`:''}
         ${apt.notes?`<span style="font-size:12px;color:var(--text-muted);">💬 ${apt.notes}</span>`:''}
+        ${apt.source?`<span style=\"font-size:12px;color:var(--text-muted);\">🏷️ ${SOURCE_LABELS[apt.source]||apt.source}</span>`:''}
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -787,7 +928,7 @@ function openDayPanel(s){
         <div class="apt-time">${apt.time?apt.time.slice(0,5):'--:--'}</div>
         <div class="apt-info">
           <div class="apt-name">${apt.patient_name}</div>
-          <div class="apt-sub">${PROC_LABELS[apt.procedure_type]||''}${apt.price?' · ฿'+Number(apt.price).toLocaleString():''}</div>
+          <div class="apt-sub">${PROC_LABELS[apt.procedure_type]||''}${apt.price?' · ฿'+Number(apt.price).toLocaleString():''}${apt.source?' · '+(SOURCE_LABELS[apt.source]||apt.source):''}</div>
         </div>
         <div class="apt-status-dot ${STATUS_DOT[apt.status]||'dot-pending'}"></div>
       </div>`).join('');
@@ -807,6 +948,10 @@ function openModal(s,apt){
   document.getElementById('fProc').value=apt?apt.procedure_type:'checkup';
   document.getElementById('fStatus').value=apt?apt.status:'pending';
   document.getElementById('fPhone').value=apt?(apt.phone||''):'';
+  document.getElementById('fEmail').value=apt?(apt.email||''):'';
+  document.getElementById('fLine').value=apt?(apt.line_id||''):'';
+  document.getElementById('fAddress').value=apt?(apt.address||''):'';
+  document.getElementById('fSource').value=apt?(apt.source||''):'';
   document.getElementById('fPrice').value=apt?(apt.price||''):'';
   document.getElementById('fNotes').value=apt?(apt.notes||''):'';
   document.getElementById('patSuggest').style.display='none';
@@ -823,6 +968,10 @@ function saveApt(){
     time:time+':00',procedure_type:document.getElementById('fProc').value,
     status:document.getElementById('fStatus').value,
     phone:document.getElementById('fPhone').value.trim()||null,
+    email:document.getElementById('fEmail').value.trim()||null,
+    line_id:document.getElementById('fLine').value.trim()||null,
+    address:document.getElementById('fAddress').value.trim()||null,
+    source:document.getElementById('fSource').value||null,
     notes:document.getElementById('fNotes').value.trim()||null,
     price:parseFloat(document.getElementById('fPrice').value)||null,
   };
@@ -871,5 +1020,6 @@ function toast(msg,type='info'){
 }
 
 // ─── Init ─────────────────────────────────────────────
+loadStatusColors();
 showPage('list');
 </script>
