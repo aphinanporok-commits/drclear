@@ -11,201 +11,262 @@
   <script src="js/config.js"></script>
   <script src="js/supabase-client.js"></script>
   <style>
-    /* ===== Calendar Page Styles ===== */
-    .page-wrap { max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
-
-    .cal-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
-    @media(max-width:900px){ .cal-layout{ grid-template-columns:1fr; } }
-
-    /* Calendar Card */
-    .cal-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-
-    .cal-header {
-      background: linear-gradient(135deg,var(--primary-dark),var(--primary));
-      color: #fff; padding: 18px 24px;
-      display: flex; align-items: center; justify-content: space-between;
+    :root {
+      --cal-border: #E8ECF0;
+      --cal-head-bg: #F7F9FC;
+      --cal-today: #1B6FA8;
+      --cal-other: #C5CDD6;
+      --chip-h: 22px;
     }
+
+    body { background: #F4F7FA; }
+
+    /* ===== Top bar ===== */
+    .cal-topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 24px; background: #fff;
+      border-bottom: 1px solid var(--cal-border);
+      position: sticky; top: 56px; z-index: 100;
+    }
+    .cal-month-label {
+      font-size: 22px; font-weight: 800; color: var(--text);
+      min-width: 200px;
+    }
+    .cal-nav-group { display: flex; gap: 4px; }
     .cal-nav-btn {
-      background: rgba(255,255,255,0.15); border: none; color: #fff;
-      font-size: 20px; width: 36px; height: 36px; border-radius: 50%;
-      cursor: pointer; transition: background .2s; display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 6px;
+      border: 1px solid var(--cal-border); background: #fff;
+      cursor: pointer; font-size: 16px; display: flex;
+      align-items: center; justify-content: center;
+      color: var(--text); transition: background .15s;
     }
-    .cal-nav-btn:hover { background: rgba(255,255,255,0.3); }
-    .cal-month-title { font-size: 20px; font-weight: 700; }
+    .cal-nav-btn:hover { background: #F0F4F8; }
+    .btn-today {
+      padding: 6px 16px; border-radius: 8px; border: 1px solid var(--cal-border);
+      background: #fff; font-family: var(--font); font-size: 13px;
+      font-weight: 600; cursor: pointer; color: var(--text); transition: background .15s;
+    }
+    .btn-today:hover { background: #F0F4F8; }
+    .btn-add-apt {
+      margin-left: auto; padding: 8px 18px; border-radius: 8px;
+      background: var(--primary); color: #fff; border: none;
+      font-family: var(--font); font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-add-apt:hover { background: var(--primary-dark); }
+
+    /* ===== Calendar Grid ===== */
+    .cal-wrap { padding: 0; }
 
     .cal-weekdays {
-      display: grid; grid-template-columns: repeat(7,1fr);
-      background: #EBF5FF; border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      background: var(--cal-head-bg);
+      border-bottom: 1px solid var(--cal-border);
     }
-    .cal-weekday {
-      text-align: center; padding: 10px 4px; font-size: 12px;
-      font-weight: 700; color: var(--primary);
+    .cal-wd {
+      text-align: center; padding: 10px 8px;
+      font-size: 12px; font-weight: 700; color: #8A9BAE;
+      letter-spacing: .5px;
     }
-    .cal-weekday:first-child { color: var(--danger); }
-    .cal-weekday:last-child { color: #2980B9; }
+    .cal-wd:first-child { color: #E74C3C; }
+    .cal-wd:last-child { color: #2980B9; }
 
-    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); }
-
-    .cal-day {
-      min-height: 90px; border-right: 1px solid var(--border);
-      border-bottom: 1px solid var(--border); padding: 6px 5px 4px;
-      cursor: pointer; transition: background .15s; position: relative;
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      background: var(--cal-border);
+      gap: 1px;
     }
-    .cal-day:nth-child(7n) { border-right: none; }
-    .cal-day:hover { background: #EBF5FF; }
-    .cal-day.other-month { background: #F8FBFF; }
-    .cal-day.other-month .cal-day-num { color: #BDD4E7; }
-    .cal-day.today { background: #EBF5FF; }
-    .cal-day.today .cal-day-num {
-      background: var(--primary); color: #fff;
-      width: 26px; height: 26px; border-radius: 50%;
+
+    .cal-cell {
+      background: #fff; min-height: 120px;
+      padding: 8px 8px 6px;
+      cursor: pointer; transition: background .12s;
+      position: relative;
+    }
+    .cal-cell:hover { background: #F5F8FB; }
+    .cal-cell.other-month { background: #FAFBFC; }
+    .cal-cell.other-month .cell-num { color: var(--cal-other); }
+    .cal-cell.is-today .cell-num-wrap .cell-num {
+      background: var(--cal-today); color: #fff;
+      border-radius: 50%; width: 26px; height: 26px;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 700;
     }
-    .cal-day.selected { background: #D6EEFF; }
-    .cal-day-num { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
-    .cal-day:nth-child(7n+1) .cal-day-num { color: var(--danger); }
-    .cal-day:nth-child(7n) .cal-day-num { color: #2980B9; }
+    .cal-cell.selected { background: #EBF5FF; }
 
-    .apt-dot {
-      font-size: 10px; padding: 1px 5px; border-radius: 4px;
-      margin-bottom: 2px; white-space: nowrap; overflow: hidden;
-      text-overflow: ellipsis; cursor: pointer; font-weight: 500;
+    .cell-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .cell-num { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1; }
+    .cell-num-wrap { display: flex; align-items: center; }
+
+    /* Sunday red, Saturday blue */
+    .cal-cell:nth-child(7n+1) .cell-num { color: #E74C3C; }
+    .cal-cell:nth-child(7n) .cell-num { color: #2980B9; }
+    .cal-cell.other-month .cell-num { color: var(--cal-other) !important; }
+    .cal-cell.is-today .cell-num { color: #fff !important; }
+
+    .cell-add {
+      width: 20px; height: 20px; border-radius: 4px; border: none;
+      background: transparent; color: var(--text-muted); font-size: 16px;
+      cursor: pointer; display: none; align-items: center; justify-content: center;
+      line-height: 1;
     }
-    .apt-dot:hover { opacity: 0.85; }
-    .apt-more { font-size: 10px; color: var(--text-muted); padding-left: 2px; }
+    .cal-cell:hover .cell-add { display: flex; }
+    .cell-add:hover { background: $DCE8F0; color: var(--primary); }
 
-    /* Right panel */
-    .side-panel { display: flex; flex-direction: column; gap: 16px; }
+    /* Chips */
+    .cal-chips { display: flex; flex-direction: column; gap: 2px; }
+    .apt-chip {
+      height: var(--chip-h); border-radius: 4px; padding: 0 6px;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: center; gap: 4px;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .apt-chip:hover { opacity: .8; }
+    .apt-chip-time { font-size: 10px; opacity: .75; flex-shrink: 0; }
+    .apt-more {
+      font-size: 11px; color: var(--text-muted); padding: 0 2px;
+      cursor: pointer;
+    }
+    .apt-more:hover { color: var(--primary); }
 
-    .panel-card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-    .panel-header { padding: 14px 18px; font-weight: 700; font-size: 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-    .panel-body { padding: 16px; }
+    /* Procedure colours */
+    .pc-aligner    { background:#D6EAF8; color:#1A5276; }
+    .pc-whitening  { background:#FEF9E7; color:#7D6608; }
+    .pc-filling    { background:#D5F5E3; color:#1E6B3B; }
+    .pc-extraction { background:#FDEDEC; color:#A93226; }
+    .pc-implant    { background:#F4ECF7; color:#6C3483; }
+    .pc-scaling    { background:#EAF2FF; color:#154360; }
+    .pc-denture    { background:#FDF2E9; color:#784212; }
+    .pc-scan       { background:#E8F8F5; color:#0E6655; }
+    .pc-checkup    { background:#EAFAF1; color:#186A3B; }
+    .pc-other      { background:#F2F3F4; color:#424949; }
 
-    /* Appointment list item */
+    /* ===== Day Panel (slide-in) ===== */
+    .day-panel {
+      position: fixed; right: 0; top: 56px; bottom: 0;
+      width: 360px; background: #fff;
+      border-left: 1px solid var(--cal-border);
+      box-shadow: -4px 0 20px rgba(0,0,0,.08);
+      transform: translateX(100%); transition: transform .25s ease;
+      z-index: 200; display: flex; flex-direction: column;
+    }
+    .day-panel.open { transform: translateX(0); }
+    .day-panel-head {
+      padding: 16px 18px; border-bottom: 1px solid var(--cal-border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: #fff;
+    }
+    .day-panel-title { font-size: 16px; font-weight: 700; }
+    .day-panel-close {
+      background: rgba(255,255,255,.2); border: none; color: #fff;
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer; font-size: 18px; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .day-panel-close:hover { background: rgba(255,255,255,.35); }
+    .day-panel-body { flex: 1; overflow-y: auto; padding: 14px; }
+    .day-panel-foot {
+      padding: 12px 14px; border-top: 1px solid var(--cal-border);
+    }
+    .btn-add-day {
+      width: 100%; padding: 10px; border-radius: 8px;
+      background: var(--primary); color: #fff; border: none;
+      font-family: var(--font); font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-add-day:hover { background: var(--primary-dark); }
+
+    /* Appointment item in panel */
     .apt-item {
-      display: flex; gap: 12px; padding: 10px 12px;
-      border-radius: 8px; margin-bottom: 8px; cursor: pointer;
-      transition: background .15s; border: 1px solid var(--border);
+      display: flex; gap: 10px; padding: 10px 12px;
+      border-radius: 10px; border: 1px solid var(--cal-border);
+      margin-bottom: 8px; cursor: pointer; transition: border-color .15s, background .15s;
     }
-    .apt-item:hover { background: #EBF5FF; border-color: var(--primary); }
-    .apt-time-badge { font-size: 13px; font-weight: 700; color: var(--primary); min-width: 42px; }
+    .apt-item:hover { border-color: var(--primary); background: #F0F7FF; }
+    .apt-time { font-size: 13px; font-weight: 700; color: var(--primary); min-width: 40px; }
     .apt-info { flex: 1; min-width: 0; }
-    .apt-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .apt-proc { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .apt-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .apt-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
     .apt-status-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+    .dot-confirmed { background: #27AE60; }
+    .dot-pending   { background: #F39C12; }
+    .dot-done      { background: #2980B9; }
+    .dot-cancelled { background: #E74C3C; }
 
-    /* Modal */
+    .panel-empty { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 14px; }
+    .panel-empty-icon { font-size: 36px; margin-bottom: 8px; }
+
+    /* ===== Modal ===== */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5); z-index: 1000;
+      background: rgba(0,0,0,.45); z-index: 500;
       align-items: center; justify-content: center;
     }
     .modal-overlay.open { display: flex; }
     .modal-box {
-      background: var(--bg-card); border-radius: 16px;
-      width: 92%; max-width: 520px; max-height: 90vh;
-      overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background: #fff; border-radius: 16px;
+      width: 94%; max-width: 520px; max-height: 90vh;
+      overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25);
     }
     .modal-head {
-      background: linear-gradient(135deg,var(--primary-dark),var(--primary));
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
       color: #fff; padding: 18px 22px; font-size: 17px; font-weight: 700;
       display: flex; align-items: center; justify-content: space-between;
       border-radius: 16px 16px 0 0;
     }
-    .modal-close { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; line-height: 1; }
-    .modal-body { padding: 22px; }
-    .form-row { margin-bottom: 16px; }
-    .form-label { display: block; font-weight: 600; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
+    .modal-close { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; }
+    .modal-body { padding: 20px 22px; }
+    .form-row { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
     .form-input, .form-select, .form-textarea {
       width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
       border-radius: 8px; font-family: var(--font); font-size: 14px;
-      background: #fff; color: var(--text); transition: border-color .2s;
+      color: var(--text); background: #fff; box-sizing: border-box;
+      transition: border-color .2s;
     }
     .form-input:focus, .form-select:focus, .form-textarea:focus {
-      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(27,111,168,0.1);
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(27,111,168,.1);
     }
-    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-textarea { resize: vertical; min-height: 72px; }
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .modal-foot { padding: 0 22px 22px; display: flex; gap: 10px; }
-    .btn-save { background: var(--primary); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; flex: 1; }
+    .modal-foot { padding: 0 22px 20px; display: flex; gap: 8px; }
+    .btn-save { background: var(--primary); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer; flex: 1; }
     .btn-save:hover { background: var(--primary-dark); }
-    .btn-cancel { background: #fff; color: var(--text-muted); border: 1.5px solid var(--border); padding: 10px 20px; border-radius: 8px; font-family: var(--font); font-size: 14px; cursor: pointer; }
+    .btn-cancel { background: #fff; color: var(--text-muted); border: 1.5px solid var(--border); padding: 10px 18px; border-radius: 8px; font-family: var(--font); font-size: 14px; cursor: pointer; }
     .btn-cancel:hover { background: #F5F8FA; }
-    .btn-delete { background: #FDF2F2; color: var(--danger); border: 1.5px solid #FADBD8; padding: 10px 16px; border-radius: 8px; font-family: var(--font); font-size: 14px; cursor: pointer; }
+    .btn-delete { background: #FDF2F2; color: var(--danger); border: 1.5px solid #FADBD8; padding: 10px 14px; border-radius: 8px; font-family: var(--font); font-size: 14px; cursor: pointer; }
     .btn-delete:hover { background: #FADBD8; }
 
-    /* Status chips */
-    .status-chip {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    .form-input-wrap { position: relative; }
+    .patient-suggest {
+      position: absolute; z-index: 60; background: #fff;
+      border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: var(--shadow); max-height: 160px; overflow-y: auto;
+      width: 100%; top: 100%; left: 0;
     }
-    .chip-confirmed { background: #D5F5E3; color: #1E8449; }
-    .chip-pending   { background: #FEF9E7; color: #D68910; }
-    .chip-done      { background: #EBF5FB; color: #2471A3; }
-    .chip-cancelled { background: #FDEDEC; color: #C0392B; }
-
-    /* Procedure color palette */
-    .proc-aligner    { background: #D6EAF8; color: #1A5276; }
-    .proc-whitening  { background: #FEF9E7; color: #7D6608; }
-    .proc-filling    { background: #D5F5E3; color: #1E6B3B; }
-    .proc-extraction { background: #FDEDEC; color: #A93226; }
-    .proc-implant    { background: #F4ECF7; color: #6C3483; }
-    .proc-scaling    { background: #EAF2FF; color: #154360; }
-    .proc-denture    { background: #FDF2E9; color: #784212; }
-    .proc-checkup    { background: #EAFAF1; color: #186A3B; }
-    .proc-other      { background: #F2F3F4; color: #424949; }
-
-    /* Setup SQL block */
-    .sql-block { background: #1E2A38; color: #A8D8F0; font-family: monospace; font-size: 12px; padding: 14px 16px; border-radius: 8px; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .patient-suggest-item { padding: 8px 12px; cursor: pointer; font-size: 14px; }
+    .patient-suggest-item:hover { background: #EBF5FF; }
 
     /* Toast */
     .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-    .toast { padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.18); animation: slideIn .3s ease; }
+    .toast { padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,.2); animation: slideIn .3s ease; }
     .toast.success { background: #27AE60; color: #fff; }
     .toast.error   { background: #E74C3C; color: #fff; }
     .toast.info    { background: var(--primary); color: #fff; }
     @keyframes slideIn { from{transform:translateX(60px);opacity:0} to{transform:translateX(0);opacity:1} }
 
-    .empty-hint { text-align: center; padding: 20px 10px; color: var(--text-muted); font-size: 13px; }
-
-    /* Mini today highlight in side list */
-    .today-label { font-size: 11px; font-weight: 700; color: var(--primary); background: #D6EEFF; padding: 2px 8px; border-radius: 20px; margin-bottom: 8px; display: inline-block; }
-    .section-date-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin: 10px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
-
-    /* View toggle */
-    .view-toggle { display: flex; gap: 8px; }
-    .view-btn { padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all .2s; }
-    .view-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-
-    /* Week view */
-    .week-view { display: none; }
-    .week-view.active { display: block; }
-    .month-view { display: block; }
-    .month-view.hidden { display: none; }
-
-    .week-grid { display: grid; grid-template-columns: 60px repeat(7,1fr); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
-    .week-day-head { text-align: center; padding: 10px 4px; font-size: 12px; font-weight: 700; color: var(--primary); background: #EBF5FF; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-    .week-day-head:first-child { background: #EBF5FF; }
-    .week-day-head.today-col { background: var(--primary); color: #fff; }
-    .week-time-label { font-size: 11px; color: var(--text-muted); text-align: right; padding: 0 6px; padding-top: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); height: 48px; }
-    .week-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); height: 48px; padding: 2px 3px; position: relative; cursor: pointer; }
-    .week-cell:hover { background: #EBF5FF; }
-    .week-cell.today-col { background: #F0F8FF; }
-
-    /* Upcoming section */
-    .upcoming-scroll { max-height: 420px; overflow-y: auto; }
-
     /* Stats bar */
-    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
-    .stat-mini { background: var(--bg-card); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); text-align: center; }
-    .stat-mini-num { font-size: 22px; font-weight: 800; color: var(--primary); }
-    .stat-mini-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-    .patient-suggest { position: absolute; z-index: 50; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); max-height: 160px; overflow-y: auto; width: 100%; top: 100%; left: 0; }
-    .patient-suggest-item { padding: 8px 12px; cursor: pointer; font-size: 14px; }
-    .patient-suggest-item:hover { background: #EBF5FF; }
-    .form-input-wrap { position: relative; }
+    .stats-bar {
+      display: flex; gap: 0; background: #fff;
+      border-bottom: 1px solid var(--cal-border);
+      padding: 10px 24px; gap: 24px;
+    }
+    .stat-item { text-align: center; }
+    .stat-num { font-size: 20px; font-weight: 800; color: var(--primary); }
+    .stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .stat-sep { width: 1px; background: var(--cal-border); margin: 0 4px; }
   </style>
 </head>
 <body>
@@ -228,159 +289,131 @@
   </div>
 </nav>
 
-<!-- MAIN -->
-<div class="page-wrap">
-
-  <!-- Stats row -->
-  <div class="stats-row">
-    <div class="stat-mini">
-      <div class="stat-mini-num" id="statToday">-</div>
-      <div class="stat-mini-lbl">นัดวันนี้</div>
-    </div>
-    <div class="stat-mini">
-      <div class="stat-mini-num" id="statWeek">-</div>
-      <div class="stat-mini-lbl">นัดสัปดาห์นี้</div>
-    </div>
-    <div class="stat-mini">
-      <div class="stat-mini-num" id="statMonth">-</div>
-      <div class="stat-mini-lbl">นัดเดือนนี้</div>
-    </div>
+<!-- Top bar -->
+<div class="cal-topbar">
+  <div class="cal-month-label" id="monthLabel">สิงหาคม 2569</div>
+  <div class="cal-nav-group">
+    <button class="cal-nav-btn" onclick="prevMonth()">&#8249;</button>
+    <button class="cal-nav-btn" onclick="nextMonth()">&#8250;</button>
   </div>
+  <button class="btn-today" onclick="goToday()">Today</button>
+  <button class="btn-add-apt" onclick="openModal(null)">+ เพิ่มนัดหมาย</button>
+</div>
 
-  <div class="cal-layout">
-    <!-- LEFT: Calendar -->
-    <div>
-      <div class="cal-card">
-        <!-- Calendar header -->
-        <div class="cal-header">
-          <button class="cal-nav-btn" onclick="prevMonth()">‹</button>
-          <div style="text-align:center">
-            <div class="cal-month-title" id="calTitle">—</div>
-            <div style="font-size:12px;opacity:.8;margin-top:2px" id="calSubtitle"></div>
-          </div>
-          <button class="cal-nav-btn" onclick="nextMonth()">›</button>
-        </div>
-        <!-- View toggle -->
-        <div style="padding:12px 16px 0;display:flex;align-items:center;justify-content:space-between">
-          <button class="btn btn-primary" style="font-size:13px;padding:7px 16px" onclick="openNewModal()">➕ เพิ่มนัดหมาย</button>
-          <div class="view-toggle">
-            <button class="view-btn active" id="btnMonth" onclick="setView('month')">เดือน</button>
-            <button class="view-btn" id="btnWeek" onclick="setView('week')">สัปดาห์</button>
-          </div>
-        </div>
-        <!-- Month view -->
-        <div class="month-view" id="monthView" style="padding:12px 0 0">
-          <div class="cal-weekdays">
-            <div class="cal-weekday">อา</div><div class="cal-weekday">จ</div>
-            <div class="cal-weekday">อ</div><div class="cal-weekday">พ</div>
-            <div class="cal-weekday">พฤ</div><div class="cal-weekday">ศ</div>
-            <div class="cal-weekday">ส</div>
-          </div>
-          <div class="cal-grid" id="calGrid"></div>
-        </div>
-        <!-- Week view -->
-        <div class="week-view" id="weekView" style="padding:12px 0 0;overflow-x:auto">
-          <div class="week-grid" id="weekGrid"></div>
-        </div>
-        <div style="padding:10px 16px;font-size:11px;color:var(--text-muted);text-align:right">
-          คลิกวันในปฏิทินเพื่อเพิ่มนัดหมาย
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT: Side panel -->
-    <div class="side-panel">
-      <!-- Selected day appointments -->
-      <div class="panel-card" id="selectedDayPanel">
-        <div class="panel-header">📋 <span id="selectedDayLabel">นัดหมายวันนี้</span></div>
-        <div class="panel-body" id="selectedDayList">
-          <div class="empty-hint">เลือกวันในปฏิทิน</div>
-        </div>
-      </div>
-
-      <!-- Upcoming appointments -->
-      <div class="panel-card">
-        <div class="panel-header">⏰ นัดหมายที่กำลังจะมาถึง</div>
-        <div class="panel-body upcoming-scroll" id="upcomingList">
-          <div class="empty-hint">กำลังโหลด...</div>
-        </div>
-      </div>
-
-      <!-- Setup SQL hint (shown if table missing) -->
-      <div class="panel-card" id="setupPanel" style="display:none">
-        <div class="panel-header" style="background:#FEF9E7;color:#7D6608">⚙️ ตั้งค่า Supabase</div>
-        <div class="panel-body">
-          <div style="font-size:13px;margin-bottom:10px;color:var(--text)">รันคำสั่ง SQL นี้ใน <a href="https://supabase.com/dashboard" target="_blank" style="color:var(--primary)">Supabase SQL Editor</a> เพื่อสร้างตาราง:</div>
-          <pre class="sql-block" id="setupSQL"></pre>
-          <button class="btn btn-primary" style="margin-top:12px;width:100%;font-size:13px" onclick="document.getElementById('setupPanel').style.display='none';loadAll()">✅ ฉันรันแล้ว ลองใหม่</button>
-        </div>
-      </div>
-    </div>
+<!-- Stats bar -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-num" id="statToday">–</div>
+    <div class="stat-lbl">นัดวันนี้</div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat-item">
+    <div class="stat-num" id="statWeek">–</div>
+    <div class="stat-lbl">สัปดาห์นี้</div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat-item">
+    <div class="stat-num" id="statMonth">–</div>
+    <div class="stat-lbl">เดือนนี้</div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat-item">
+    <div class="stat-num" id="statPending">–</div>
+    <div class="stat-lbl">รอยืนยัน</div>
   </div>
 </div>
 
-<!-- APPOINTMENT MODAL -->
-<div class="modal-overlay" id="aptModal">
+<!-- Calendar -->
+<div class="cal-wrap">
+  <div class="cal-weekdays">
+    <div class="cal-wd">อา</div>
+    <div class="cal-wd">จ</div>
+    <div class="cal-wd">อ</div>
+    <div class="cal-wd">พ</div>
+    <div class="cal-wd">พฤ</div>
+    <div class="cal-wd">ศ</div>
+    <div class="cal-wd">ส</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<!-- Day Panel -->
+<div class="day-panel" id="dayPanel">
+  <div class="day-panel-head">
+    <div class="day-panel-title" id="dayPanelTitle">วันที่</div>
+    <button class="day-panel-close" onclick="closePanel()">×</button>
+  </div>
+  <div class="day-panel-body" id="dayPanelBody"></div>
+  <div class="day-panel-foot">
+    <button class="btn-add-day" id="btnAddDay" onclick="openModal(null)">+ เพิ่มนัดวันนี้</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
   <div class="modal-box">
     <div class="modal-head">
-      <span id="modalTitle">➕ เพิ่มนัดหมายใหม่</span>
+      <span id="modalTitle">เพิ่มนัดหมาย</span>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="fId">
       <div class="form-row">
         <label class="form-label">ชื่อลูกค้า *</label>
         <div class="form-input-wrap">
-          <input type="text" id="fPatient" class="form-input" placeholder="พิมพ์ชื่อหรือค้นหาลูกค้า..." autocomplete="off" oninput="searchPatients(this.value)">
+          <input class="form-input" id="fPatient" placeholder="พิมพ์ชื่อลูกค้า..." autocomplete="off"
+            oninput="searchPatients(this.value)">
+          <input type="hidden" id="fPatientId">
           <div class="patient-suggest" id="patientSuggest" style="display:none"></div>
         </div>
-        <input type="hidden" id="fPatientId">
       </div>
       <div class="form-row-2">
-        <div class="form-row">
-          <label class="form-label">วันที่ *</label>
-          <input type="date" id="fDate" class="form-input">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">วันที่นัด *</label>
+          <input class="form-input" type="date" id="fDate">
         </div>
-        <div class="form-row">
+        <div class="form-row" style="margin-bottom:0">
           <label class="form-label">เวลา *</label>
-          <input type="time" id="fTime" class="form-input" value="09:00">
+          <input class="form-input" type="time" id="fTime">
         </div>
       </div>
-      <div class="form-row">
-        <label class="form-label">ประเภทการรักษา *</label>
-        <select id="fProc" class="form-select">
-          <option value="">— เลือกประเภท —</option>
+      <div class="form-row" style="margin-top:14px">
+        <label class="form-label">ประเภทการรักษา</label>
+        <select class="form-select" id="fProc">
+          <option value="checkup">🦷 ตรวจฟัน</option>
           <option value="aligner">😁 จัดฟัน Clear Aligner</option>
           <option value="whitening">✨ ฟอกสีฟัน</option>
-          <option value="filling">🦷 อุดฟัน</option>
-          <option value="extraction">😬 ถอนฟัน</option>
-          <option value="implant">🔩 รากฟันเทียม</option>
-          <option value="scaling">🪥 ขูดหินปูน / สเกลล์</option>
-          <option value="denture">🦷 ทำฟันปลอม</option>
+          <option value="filling">🔧 อุดฟัน</option>
+          <option value="extraction">❌ ถอนฟัน</option>
+          <option value="implant">🦴 รากฟันเทียม</option>
+          <option value="scaling">🧹 ขูดหินปูน</option>
+          <option value="denture">👄 ทำฟันปลอม</option>
           <option value="scan">🦷 แสกนฟัน (3D Scan)</option>
-          <option value="checkup">🔍 ตรวจฟัน / ติดตามผล</option>
           <option value="other">📋 อื่นๆ</option>
         </select>
       </div>
-      <div class="form-row">
-        <label class="form-label">สถานะ</label>
-        <select id="fStatus" class="form-select">
-          <option value="pending">⏳ รอยืนยัน</option>
-          <option value="confirmed">✅ ยืนยันแล้ว</option>
-          <option value="done">✔️ มาแล้ว</option>
-          <option value="cancelled">❌ ยกเลิก</option>
-        </select>
+      <div class="form-row-2">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">สถานะ</label>
+          <select class="form-select" id="fStatus">
+            <option value="pending">รอยืนยัน</option>
+            <option value="confirmed">ยืนยันแล้ว</option>
+            <option value="done">เสร็จแล้ว</option>
+            <option value="cancelled">ยกเลิก</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">ราคา (บาท)</label>
+          <input class="form-input" type="number" id="fPrice" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:14px">
+        <label class="form-label">เบอร์โทร</label>
+        <input class="form-input" id="fPhone" placeholder="08x-xxx-xxxx">
       </div>
       <div class="form-row">
-        <label class="form-label">โทรศัพท์</label>
-        <input type="tel" id="fPhone" class="form-input" placeholder="08x-xxx-xxxx">
-      </div>
-      <div class="form-row">
-        <label class="form-label">รายละเอียด / หมายเหตุ</label>
-        <textarea id="fNotes" class="form-textarea" placeholder="เช่น ต้องการรักษา 3 ครั้ง, มีประวัติแพ้ยา..."></textarea>
-      </div>
-      <div class="form-row">
-        <label class="form-label">ค่าบริการ (บาท)</label>
-        <input type="number" id="fPrice" class="form-input" placeholder="0">
+        <label class="form-label">หมายเหตุ</label>
+        <textarea class="form-textarea" id="fNotes" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
       </div>
     </div>
     <div class="modal-foot">
@@ -391,20 +424,14 @@
   </div>
 </div>
 
-<!-- TOAST -->
+<!-- Toast -->
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
-// ===== Data & State =====
-const { createClient: _sc } = supabase;
-const _db = _sc(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-let appointments = [];   // all loaded appointments
-let patients = [];       // patient list for autocomplete
-let currentDate = new Date();
-let selectedDate = null;
-let editingId = null;
-let currentView = 'month';
+// ===== Config =====
+const SUPABASE_URL = window.SUPABASE_CONFIG?.url || '';
+const SUPABASE_KEY = window.SUPABASE_CONFIG?.anonKey || '';
+const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 const PROC_LABELS = {
   aligner:'จัดฟัน Clear Aligner', whitening:'ฟอกสีฟัน', filling:'อุดฟัน',
@@ -412,370 +439,206 @@ const PROC_LABELS = {
   denture:'ทำฟันปลอม', scan:'แสกนฟัน (3D Scan)', checkup:'ตรวจฟัน', other:'อื่นๆ'
 };
 const PROC_CLASS = {
-  aligner:'proc-aligner', whitening:'proc-whitening', filling:'proc-filling',
-  extraction:'proc-extraction', implant:'proc-implant', scaling:'proc-scaling',
-  denture:'proc-denture', scan:'proc-scan', checkup:'proc-checkup', other:'proc-other'
+  aligner:'pc-aligner', whitening:'pc-whitening', filling:'pc-filling',
+  extraction:'pc-extraction', implant:'pc-implant', scaling:'pc-scaling',
+  denture:'pc-denture', scan:'pc-scan', checkup:'pc-checkup', other:'pc-other'
 };
-const STATUS_CHIP = {
-  pending:'<span class="status-chip chip-pending">⏳ รอยืนยัน</span>',
-  confirmed:'<span class="status-chip chip-confirmed">✅ ยืนยัน</span>',
-  done:'<span class="status-chip chip-done">✔️ มาแล้ว</span>',
-  cancelled:'<span class="status-chip chip-cancelled">❌ ยกเลิก</span>'
-};
-const STATUS_COLOR = { pending:'#E67E22', confirmed:'#27AE60', done:'#2471A3', cancelled:'#C0392B' };
-
-const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+const STATUS_DOT = { confirmed:'dot-confirmed', pending:'dot-pending', done:'dot-done', cancelled:'dot-cancelled' };
+const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-const THAI_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-// ===== Supabase Appointments =====
-const Appointments = {
-  async getAll() {
-    const { data, error } = await _db.from('appointments').select('*').order('date').order('time');
-    if (error) throw error;
-    return data || [];
-  },
-  async create(apt) {
-    const { data, error } = await _db.from('appointments').insert(apt).select().single();
-    if (error) throw error;
-    return data;
-  },
-  async update(id, apt) {
-    const { data, error } = await _db.from('appointments').update(apt).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-  },
-  async delete(id) {
-    const { error } = await _db.from('appointments').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
+let currentDate = new Date();
+let allApts = [];
+let patients = [];
+let editingId = null;
+let selectedDate = null;
 
-// ===== Init =====
+// ===== Data =====
 async function loadAll() {
+  if (!sb) return;
   try {
-    appointments = await Appointments.getAll();
-    try { patients = await Patients.getAll(); } catch(_) {}
+    const { data, error } = await sb.from('appointments').select('*').order('date').order('time');
+    if (error) throw error;
+    allApts = data || [];
     renderCalendar();
-    renderUpcoming();
     updateStats();
-    if (selectedDate) renderDayPanel(selectedDate);
   } catch(err) {
-    if (err.message && err.message.includes('relation "public.appointments" does not exist')) {
-      showSetupPanel();
+    if (err.message.includes('schema cache') || err.message.includes('does not exist')) {
+      toast('⚠️ ยังไม่มีตาราง appointments — กรุณารัน SQL ใน Supabase', 'error');
     } else {
       toast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
     }
   }
-}
-
-function showSetupPanel() {
-  document.getElementById('setupPanel').style.display = 'block';
-  document.getElementById('setupSQL').textContent = `CREATE TABLE IF NOT EXISTS appointments (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  patient_id UUID REFERENCES patients(id) ON DELETE SET NULL,
-  patient_name VARCHAR(255) NOT NULL,
-  phone VARCHAR(50),
-  date DATE NOT NULL,
-  time TIME NOT NULL,
-  procedure_type VARCHAR(50) DEFAULT 'checkup',
-  status VARCHAR(20) DEFAULT 'pending',
-  notes TEXT,
-  price NUMERIC(10,2),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all on appointments" ON appointments
-  FOR ALL USING (true) WITH CHECK (true);
-CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date);`;
-}
-
-// ===== Calendar Render =====
-function renderCalendar() {
-  document.getElementById('calTitle').textContent =
-    THAI_MONTHS[currentDate.getMonth()] + ' ' + (currentDate.getFullYear() + 543);
-  document.getElementById('calSubtitle').textContent =
-    currentDate.getFullYear() + ' (ค.ศ.)';
-
-  if (currentView === 'month') renderMonthView();
-  else renderWeekView();
-}
-
-function renderMonthView() {
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const daysInPrev = new Date(year, month, 0).getDate();
-  const today = todayStr();
-
-  // apt map: dateStr -> [apt, ...]
-  const aptMap = {};
-  appointments.forEach(a => {
-    if (!aptMap[a.date]) aptMap[a.date] = [];
-    aptMap[a.date].push(a);
-  });
-
-  let cells = [];
-  // prev month fill
-  for (let i = firstDay - 1; i >= 0; i--) {
-    cells.push({ day: daysInPrev - i, month: month - 1, year, other: true });
-  }
-  // current month
-  for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, month, year, other: false });
-  }
-  // next month fill
-  let next = 1;
-  while (cells.length % 7 !== 0) {
-    cells.push({ day: next++, month: month + 1, year, other: true });
-  }
-
-  cells.forEach(cell => {
-    const dateStr = `${cell.year}-${String(cell.month + 1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}`;
-    const apts = aptMap[dateStr] || [];
-    const isToday = dateStr === today;
-    const isSelected = selectedDate === dateStr;
-
-    const div = document.createElement('div');
-    div.className = 'cal-day' + (cell.other ? ' other-month' : '') + (isToday ? ' today' : '') + (isSelected ? ' selected' : '');
-    div.onclick = () => { selectedDate = dateStr; renderCalendar(); renderDayPanel(dateStr); };
-
-    const numDiv = document.createElement('div');
-    numDiv.className = 'cal-day-num';
-    numDiv.textContent = cell.day;
-    div.appendChild(numDiv);
-
-    const maxShow = 2;
-    apts.slice(0, maxShow).forEach(a => {
-      const dot = document.createElement('div');
-      dot.className = 'apt-dot ' + (PROC_CLASS[a.procedure_type] || 'proc-other');
-      dot.textContent = (a.time ? a.time.slice(0,5) + ' ' : '') + a.patient_name;
-      dot.onclick = e => { e.stopPropagation(); openEditModal(a); };
-      div.appendChild(dot);
-    });
-    if (apts.length > maxShow) {
-      const more = document.createElement('div');
-      more.className = 'apt-more';
-      more.textContent = `+${apts.length - maxShow} เพิ่มเติม`;
-      div.appendChild(more);
-    }
-
-    grid.appendChild(div);
-  });
-}
-
-function renderWeekView() {
-  const grid = document.getElementById('weekGrid');
-  grid.innerHTML = '';
-  const today = todayStr();
-
-  // find week start (Sunday)
-  const base = selectedDate ? new Date(selectedDate) : new Date(currentDate);
-  const dayOfWeek = base.getDay();
-  const weekStart = new Date(base);
-  weekStart.setDate(base.getDate() - dayOfWeek);
-
-  const weekDays = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
-    weekDays.push(d);
-  }
-
-  // apt map
-  const aptMap = {};
-  appointments.forEach(a => {
-    const hour = parseInt((a.time || '09:00').split(':')[0]);
-    const key = a.date + '_' + hour;
-    if (!aptMap[key]) aptMap[key] = [];
-    aptMap[key].push(a);
-  });
-
-  const DAYS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-
-  // header row
-  const emptyHead = document.createElement('div');
-  emptyHead.className = 'week-day-head';
-  emptyHead.textContent = '';
-  grid.appendChild(emptyHead);
-
-  weekDays.forEach((d, i) => {
-    const ds = dateStr(d);
-    const h = document.createElement('div');
-    h.className = 'week-day-head' + (ds === today ? ' today-col' : '');
-    h.innerHTML = `<div>${DAYS[i]}</div><div style="font-size:16px;font-weight:800">${d.getDate()}</div>`;
-    grid.appendChild(h);
-  });
-
-  // time rows 08-20
-  for (let hr = 8; hr <= 20; hr++) {
-    const timeLabel = document.createElement('div');
-    timeLabel.className = 'week-time-label';
-    timeLabel.textContent = hr + ':00';
-    grid.appendChild(timeLabel);
-
-    weekDays.forEach(d => {
-      const ds = dateStr(d);
-      const key = ds + '_' + hr;
-      const cell = document.createElement('div');
-      cell.className = 'week-cell' + (ds === today ? ' today-col' : '');
-      cell.onclick = () => {
-        selectedDate = ds;
-        document.getElementById('fDate').value = ds;
-        document.getElementById('fTime').value = String(hr).padStart(2,'0') + ':00';
-        openNewModal(ds);
-      };
-      (aptMap[key] || []).forEach(a => {
-        const dot = document.createElement('div');
-        dot.className = 'apt-dot ' + (PROC_CLASS[a.procedure_type] || 'proc-other');
-        dot.style.cssText = 'font-size:10px;overflow:hidden;white-space:nowraw;text-overflow:ellipsis;';
-        dot.textContent = a.patient_name;
-        dot.onclick = e => { e.stopPropagation(); openEditModal(a); };
-        cell.appendChild(dot);
-      });
-      grid.appendChild(cell);
-    });
-  }
-}
-
-function setView(v) {
-  currentView = v;
-  document.getElementById('btnMonth').className = 'view-btn' + (v==='month'?' active':'');
-  document.getElementById('btnWeek').className  = 'view-btn' + (v==='week' ?' active':'');
-  document.getElementById('monthView').className = 'month-view' + (v==='month'?'':' hidden');
-  document.getElementById('weekView').className  = 'week-view'  + (v==='week' ?' active':'');
-  renderCalendar();
-}
-
-// ===== Day panel =====
-function renderDayPanel(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  document.getElementById('selectedDayLabel').textContent =
-    d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-
-  const dayApts = appointments.filter(a => a.date === dateStr)
-    .sort((a,b) => (a.time||'').localeCompare(b.time||''));
-  const el = document.getElementById('selectedDayList');
-
-  if (!dayApts.length) {
-    el.innerHTML = `<div class="empty-hint">ไม่มีนัดหมายวันนี้<br><button class="btn btn-primary" style="margin-top:10px;font-size:13px" onclick="openNewModal('${dateStr}')">➕ เพิ่มนัด</button></div>`;
-    return;
-  }
-
-  el.innerHTML = dayApts.map(a => `
-    <div class="apt-item" onclick="openEditModal(${JSON.stringify(a).replace(/"/g,'&quot;')})">
-      <div class="apt-time-badge">${(a.time||'').slice(0,5)}</div>
-      <div class="apt-info">
-        <div class="apt-name">${a.patient_name}</div>
-        <div class="apt-proc">${PROC_LABELS[a.procedure_type]||a.procedure_type||'—'} ${a.price ? ' · ฿'+Number(a.price).toLocaleString() : ''}</div>
-        <div style="margin-top:4px">${STATUS_CHIP[a.status]||''}</div>
-        ${a.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">${a.notes}</div>` : ''}
-      </div>
-    </div>
-  `).join('') + `<div style="margin-top:8px"><button class="btn btn-primary" style="width:100%;font-size:13px" onclick="openNewModal('${dateStr}')">➕ เพิ่มนัดวันนี้</button></div>`;
-}
-
-// ===== Upcoming =====
-function renderUpcoming() {
-  const today = todayStr();
-  const upcoming = appointments
-    .filter(a => a.date >= today && a.status !== 'cancelled')
-    .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time))
-    .slice(0, 20);
-
-  const el = document.getElementById('upcomingList');
-  if (!upcoming.length) {
-    el.innerHTML = '<div class="empty-hint">ยังไม่มีนัดหมาย</div>';
-    return;
-  }
-
-  let html = '';
-  let lastDate = '';
-  upcoming.forEach(a => {
-    if (a.date !== lastDate) {
-      const d = new Date(a.date + 'T00:00:00');
-      const isToday = a.date === today;
-      html += `<div class="section-date-label">${isToday ? '📌 วันนี้ — ' : ''}${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()+543}</div>`;
-      lastDate = a.date;
-    }
-    html += `
-      <div class="apt-item" onclick="openEditModal(${JSON.stringify(a).replace(/"/g,'&quot;')})">
-        <div class="apt-time-badge">${(a.time||'').slice(0,5)}</div>
-        <div class="apt-info">
-          <div class="apt-name">${a.patient_name}</div>
-          <div class="apt-proc">${PROC_LABELS[a.procedure_type]||'—'}${a.phone ? ' · ' + a.phone : ''}</div>
-        </div>
-        <div class="apt-status-dot" style="background:${STATUS_COLOR[a.status]||'#999'}"></div>
-      </div>`;
-  });
-  el.innerHTML = html;
+  // load patients
+  try {
+    const { data } = await sb.from('patients').select('id,name,phone').order('name');
+    patients = data || [];
+  } catch(_) {}
 }
 
 // ===== Stats =====
 function updateStats() {
-  const today = todayStr();
-  const wd = new Date(); wd.setDate(wd.getDate() - wd.getDay());
-  const weekStart = dateStr(wd);
-  const monthStart = today.slice(0,7) + '-01';
+  const td = todayStr();
+  const now = new Date();
+  const weekStart = dateStr(new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()));
+  const weekEnd   = addDays(weekStart, 6);
+  const mStart = dateStr(new Date(now.getFullYear(), now.getMonth(), 1));
+  const mEnd   = dateStr(new Date(now.getFullYear(), now.getMonth()+1, 0));
 
-  const active = appointments.filter(a => a.status !== 'cancelled');
-  document.getElementById('statToday').textContent  = active.filter(a => a.date === today).length;
-  document.getElementById('statWeek').textContent   = active.filter(a => a.date >= weekStart && a.date <= today || a.date > today && a.date <= addDays(weekStart,6)).length;
-  document.getElementById('statMonth').textContent  = active.filter(a => a.date >= monthStart).length;
+  document.getElementById('statToday').textContent  = allApts.filter(a => a.date === td).length;
+  document.getElementById('statWeek').textContent   = allApts.filter(a => a.date >= weekStart && a.date <= weekEnd).length;
+  document.getElementById('statMonth').textContent  = allApts.filter(a => a.date >= mStart && a.date <= mEnd).length;
+  document.getElementById('statPending').textContent= allApts.filter(a => a.status === 'pending').length;
+}
+
+// ===== Render Calendar =====
+function renderCalendar() {
+  const y = currentDate.getFullYear();
+  const m = currentDate.getMonth();
+  document.getElementById('monthLabel').textContent = TH_MONTHS[m] + ' ' + (y + 543);
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const daysInPrev  = new Date(y, m, 0).getDate();
+  const today = todayStr();
+
+  // Build apt map
+  const aptMap = {};
+  allApts.forEach(a => {
+    if (!aptMap[a.date]) aptMap[a.date] = [];
+    aptMap[a.date].push(a);
+  });
+
+  // Total cells: 6 rows × 7 = 42
+  for (let i = 0; i < 42; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+
+    let ds, isOther = false;
+    if (i < firstDay) {
+      const d = daysInPrev - firstDay + i + 1;
+      ds = dateStr(new Date(y, m-1, d));
+      isOther = true;
+    } else if (i - firstDay < daysInMonth) {
+      const d = i - firstDay + 1;
+      ds = dateStr(new Date(y, m, d));
+    } else {
+      const d = i - firstDay - daysInMonth + 1;
+      ds = dateStr(new Date(y, m+1, d));
+      isOther = true;
+    }
+
+    if (isOther) cell.classList.add('other-month');
+    if (ds === today) cell.classList.add('is-today');
+    if (ds === selectedDate) cell.classList.add('selected');
+
+    const dayNum = parseInt(ds.split('-')[2]);
+    cell.innerHTML = `
+      <div class="cell-top">
+        <div class="cell-num-wrap"><div class="cell-num">${dayNum}</div></div>
+        <button class="cell-add" onclick="event.stopPropagation();openModal('${ds}')">+</button>
+      </div>
+      <div class="cal-chips" id="chips-${ds}"></div>`;
+
+    cell.onclick = () => openDayPanel(ds);
+    grid.appendChild(cell);
+
+    // Render chips
+    const apts = (aptMap[ds] || []).sort((a,b) => a.time.localeCompare(b.time));
+    const chipsEl = cell.querySelector('.cal-chips');
+    const max = 3;
+    apts.slice(0, max).forEach(apt => {
+      const chip = document.createElement('div');
+      chip.className = 'apt-chip ' + (PROC_CLASS[apt.procedure_type] || 'pc-other');
+      const t = apt.time ? apt.time.slice(0,5) : '';
+      chip.innerHTML = `<span class="apt-chip-time">${t}</span>${apt.patient_name}`;
+      chip.title = apt.patient_name + ' · ' + (PROC_LABELS[apt.procedure_type]||'') + ' · ' + t;
+      chip.onclick = (e) => { e.stopPropagation(); openModal(ds, apt); };
+      chipsEl.appendChild(chip);
+    });
+    if (apts.length > max) {
+      const more = document.createElement('div');
+      more.className = 'apt-more';
+      more.textContent = `+${apts.length - max} more`;
+      more.onclick = (e) => { e.stopPropagation(); openDayPanel(ds); };
+      chipsEl.appendChild(more);
+    }
+  }
+}
+
+// ===== Day Panel =====
+function openDayPanel(ds) {
+  selectedDate = ds;
+  renderCalendar();
+
+  const panel = document.getElementById('dayPanel');
+  const body  = document.getElementById('dayPanelBody');
+  const title = document.getElementById('dayPanelTitle');
+  const btnAdd = document.getElementById('btnAddDay');
+
+  // Format date Thai
+  const d = new Date(ds + 'T00:00:00');
+  const dayNames = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+  title.textContent = `${dayNames[d.getDay()]} ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
+  btnAdd.onclick = () => openModal(ds);
+
+  const apts = allApts.filter(a => a.date === ds).sort((a,b) => a.time.localeCompare(b.time));
+  if (!apts.length) {
+    body.innerHTML = `<div class="panel-empty"><div class="panel-empty-icon">📅</div>ไม่มีนัดหมายวันนี้</div>`;
+  } else {
+    body.innerHTML = apts.map(apt => `
+      <div class="apt-item" onclick="openModal('${ds}', ${JSON.stringify(apt).replace(/"/g,'&quot;')})">
+        <div class="apt-time">${apt.time ? apt.time.slice(0,5) : '--:--'}</div>
+        <div class="apt-info">
+          <div class="apt-name">${apt.patient_name}</div>
+          <div class="apt-sub">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}${apt.price ? ' · ฿'+Number(apt.price).toLocaleString() : ''}</div>
+        </div>
+        <div class="apt-status-dot ${STATUS_DOT[apt.status]||'dot-pending'}"></div>
+      </div>`).join('');
+  }
+
+  panel.classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('dayPanel').classList.remove('open');
+  selectedDate = null;
+  renderCalendar();
 }
 
 // ===== Modal =====
-function openNewModal(ds) {
-  editingId = null;
-  document.getElementById('modalTitle').textContent = '➕ เพิ่มนัดหมายใหม่';
-  document.getElementById('btnDelete').style.display = 'none';
-  clearForm();
-  if (ds) document.getElementById('fDate').value = ds;
-  else document.getElementById('fDate').value = todayStr();
-  document.getElementById('aptModal').classList.add('open');
-}
-
-function openEditModal(a) {
-  editingId = a.id;
-  document.getElementById('modalTitle').textContent = '✏️ แก้ไขนัดหมาย';
-  document.getElementById('btnDelete').style.display = '';
-  document.getElementById('fPatient').value = a.patient_name || '';
-  document.getElementById('fPatientId').value = a.patient_id || '';
-  document.getElementById('fDate').value = a.date || '';
-  document.getElementById('fTime').value = (a.time||'').slice(0,5);
-  document.getElementById('fProc').value = a.procedure_type || '';
-  document.getElementById('fStatus').value = a.status || 'pending';
-  document.getElementById('fPhone').value = a.phone || '';
-  document.getElementById('fNotes').value = a.notes || '';
-  document.getElementById('fPrice').value = a.price || '';
-  document.getElementById('aptModal').classList.add('open');
+function openModal(ds, apt) {
+  editingId = apt ? apt.id : null;
+  document.getElementById('modalTitle').textContent = apt ? 'แก้ไขนัดหมาย' : 'เพิ่มนัดหมาย';
+  document.getElementById('btnDelete').style.display = apt ? 'block' : 'none';
+  document.getElementById('fId').value = '';
+  document.getElementById('fPatient').value = apt ? apt.patient_name : '';
+  document.getElementById('fPatientId').value = apt ? (apt.patient_id||'') : '';
+  document.getElementById('fDate').value = apt ? apt.date : (ds || todayStr());
+  document.getElementById('fTime').value = apt ? (apt.time||'').slice(0,5) : '09:00';
+  document.getElementById('fProc').value = apt ? apt.procedure_type : 'checkup';
+  document.getElementById('fStatus').value = apt ? apt.status : 'pending';
+  document.getElementById('fPhone').value = apt ? (apt.phone||'') : '';
+  document.getElementById('fPrice').value = apt ? (apt.price||'') : '';
+  document.getElementById('fNotes').value = apt ? (apt.notes||'') : '';
+  document.getElementById('patientSuggest').style.display = 'none';
+  document.getElementById('modalOverlay').classList.add('open');
 }
 
 function closeModal() {
-  document.getElementById('aptModal').classList.remove('open');
-  document.getElementById('patientSuggest').style.display = 'none';
-}
-
-function clearForm() {
-  ['fPatient','fPatientId','fDate','fPhone','fNotes','fPrice'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fTime').value = '09:00';
-  document.getElementById('fProc').value = '';
-  document.getElementById('fStatus').value = 'pending';
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
 }
 
 async function saveApt() {
-  const name  = document.getElementById('fPatient').value.trim();
-  const date  = document.getElementById('fDate').value;
-  const time  = document.getElementById('fTime').value;
-  const proc  = document.getElementById('fProc').value;
-  if (!name) { toast('กรุณาใส่ชื่อลูกค้า', 'error'); return; }
-  if (!date) { toast('กรุณาเลือกวันที่', 'error'); return; }
-  if (!proc) { toast('กรุณาเลือกประเภทการรักษา', 'error'); return; }
-
+  const name = document.getElementById('fPatient').value.trim();
+  const date = document.getElementById('fDate').value;
+  const time = document.getElementById('fTime').value;
+  if (!name || !date || !time) { toast('กรุณากรอกข้อมูลให้ครบ', 'error'); return; }
+  const proc = document.getElementById('fProc').value;
   const payload = {
     patient_name: name,
     patient_id: document.getElementById('fPatientId').value || null,
@@ -786,18 +649,17 @@ async function saveApt() {
     notes: document.getElementById('fNotes').value.trim() || null,
     price: parseFloat(document.getElementById('fPrice').value) || null,
   };
-
   try {
     if (editingId) {
-      await Appointments.update(editingId, payload);
-      toast('อัปเดตนัดหมายแล้ว ✅', 'success');
+      await sb.from('appointments').update(payload).eq('id', editingId);
+      toast('แก้ไขนัดหมายเรียบร้อย ✅', 'success');
     } else {
-      await Appointments.create(payload);
-      toast('เพิ่มนัดหมายแล้ว ✅', 'success');
+      await sb.from('appointments').insert([payload]);
+      toast('เพิ่มนัดหมายเรียบร้อย ✅', 'success');
     }
     closeModal();
     await loadAll();
-    if (date) renderDayPanel(date);
+    if (selectedDate) openDayPanel(selectedDate);
   } catch(err) {
     toast('บันทึกไม่สำเร็จ: ' + err.message, 'error');
   }
@@ -807,31 +669,28 @@ async function deleteApt() {
   if (!editingId) return;
   if (!confirm('ต้องการลบนัดหมายนี้?')) return;
   try {
-    await Appointments.delete(editingId);
+    await sb.from('appointments').delete().eq('id', editingId);
     toast('ลบนัดหมายแล้ว', 'info');
     closeModal();
     await loadAll();
+    if (selectedDate) openDayPanel(selectedDate);
   } catch(err) {
     toast('ลบไม่สำเร็จ: ' + err.message, 'error');
   }
 }
 
 // ===== Patient autocomplete =====
-async function searchPatients(q) {
+function searchPatients(q) {
   const box = document.getElementById('patientSuggest');
   document.getElementById('fPatientId').value = '';
   if (!q || q.length < 1) { box.style.display = 'none'; return; }
-
   const filtered = patients.filter(p =>
-    p.name.toLowerCase().includes(q.toLowerCase()) ||
-    (p.phone||'').includes(q)
+    p.name.toLowerCase().includes(q.toLowerCase()) || (p.phone||'').includes(q)
   ).slice(0, 8);
-
   if (!filtered.length) { box.style.display = 'none'; return; }
-
   box.innerHTML = filtered.map(p => `
     <div class="patient-suggest-item" onclick="selectPatient('${p.id}','${p.name.replace(/'/g,"\\'")}','${(p.phone||'').replace(/'/g,"\\'")}')">
-      👤 ${p.name} ${p.phone ? '· ' + p.phone : ''}
+      👤 ${p.name}${p.phone ? ' · ' + p.phone : ''}
     </div>`).join('');
   box.style.display = 'block';
 }
@@ -844,20 +703,14 @@ function selectPatient(id, name, phone) {
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.form-input-wrap')) {
+  if (!e.target.closest('.form-input-wrap'))
     document.getElementById('patientSuggest').style.display = 'none';
-  }
 });
 
 // ===== Nav =====
-function prevMonth() {
-  currentDate.setMonth(currentDate.getMonth() - 1);
-  renderCalendar();
-}
-function nextMonth() {
-  currentDate.setMonth(currentDate.getMonth() + 1);
-  renderCalendar();
-}
+function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
+function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+function goToday()   { currentDate = new Date(); selectedDate = todayStr(); renderCalendar(); openDayPanel(todayStr()); }
 
 // ===== Helpers =====
 function todayStr() {
@@ -872,8 +725,7 @@ function addDays(ds, n) {
   d.setDate(d.getDate() + n);
   return dateStr(d);
 }
-
-function toast(msg, type = 'info') {
+function toast(msg, type='info') {
   const wrap = document.getElementById('toastWrap');
   const el = document.createElement('div');
   el.className = 'toast ' + type;
@@ -882,8 +734,6 @@ function toast(msg, type = 'info') {
   setTimeout(() => el.remove(), 3500);
 }
 
-// ===== Start =====
-selectedDate = todayStr();
 loadAll();
 </script>
 </body>
