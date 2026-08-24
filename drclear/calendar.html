@@ -71,7 +71,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cal-wd{text-align:center;padding:10px 4px;font-size:13px;font-weight:800;color:#8A9BAE;letter-spacing:.5px;}
 .cal-wd:first-child{color:#E74C3C;}.cal-wd:last-child{color:#2980B9;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--cal-border);gap:1px;}
-.cal-cell{background:var(--surface);min-height:132px;padding:10px 12px 10px;cursor:pointer;transition:background .12s;position:relative;}
+.cal-cell{background:var(--surface);min-height:150px;padding:10px 12px 10px;cursor:pointer;transition:background .12s;position:relative;}
 .cal-cell:hover{background:var(--cal-head-bg);}
 .cal-cell.other-month{background:color-mix(in srgb,var(--surface) 60%,var(--bg) 40%);}
 .cal-cell.other-month .cell-num{color:var(--cal-other);}
@@ -84,16 +84,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cal-cell:nth-child(7n+1) .cell-num{color:#E74C3C;}
 .cal-cell:nth-child(7n) .cell-num{color:#2980B9;}
 .cal-cell.is-today .cell-num{color:#fff!important;}
-.cell-add{width:16px;height:16px;border-radius:4px;border:none;background:transparent;
-  color:var(--text-muted);font-size:13px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1;}
-.cal-cell:hover .cell-add{display:flex;}
+.cell-add{width:18px;height:18px;border-radius:4px;border:none;background:transparent;
+  color:var(--text-muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  line-height:1;visibility:hidden;flex-shrink:0;}
+.cal-cell:hover .cell-add{visibility:visible;}
 .cell-add:hover{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);}
-.cal-chips{display:flex;flex-direction:column;gap:2px;}
-.apt-chip{height:21px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:600;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;cursor:pointer;}
+.cal-chips{display:flex;flex-direction:column;gap:3px;}
+.apt-chip{height:25px;border-radius:5px;padding:0 7px;font-size:12.5px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;cursor:pointer;}
 .apt-chip:hover{opacity:.8;}
-.apt-chip-time{font-size:9px;opacity:.75;flex-shrink:0;}
-.apt-more{font-size:10px;color:var(--text-muted);padding:0 2px;cursor:pointer;}
+.apt-chip-time{font-size:10.5px;opacity:.75;flex-shrink:0;}
+.apt-more{font-size:11.5px;font-weight:700;color:var(--text-muted);padding:2px 2px;cursor:pointer;}
 .apt-more:hover{color:var(--primary);}
 
 /* ── Date picker popup ── */
@@ -921,12 +922,20 @@ function renderCalendar(){
     cell.onclick=()=>openDayPanel(s);grid.appendChild(cell);
     const apts=(aptMap[s]||[]).sort((a,b)=>a.time.localeCompare(b.time));
     const ch=cell.querySelector('.cal-chips');
-    apts.forEach(apt=>{
+    const MAX_CHIPS=5;
+    apts.slice(0,MAX_CHIPS).forEach(apt=>{
       const chip=document.createElement('div');
       chip.className='apt-chip '+(PROC_CLASS[apt.procedure_type]||'pc-other');
       chip.innerHTML=`<span class="apt-chip-time">${apt.time?apt.time.slice(0,5):''}</span>${apt.patient_name}`;
       chip.onclick=e=>{e.stopPropagation();openModal(s,apt);};ch.appendChild(chip);
     });
+    if(apts.length>MAX_CHIPS){
+      const more=document.createElement('div');
+      more.className='apt-more';
+      more.textContent=`+${apts.length-MAX_CHIPS} เพิ่มเติม`;
+      more.onclick=e=>{e.stopPropagation();openDayPanel(s);};
+      ch.appendChild(more);
+    }
   }
 }
 
