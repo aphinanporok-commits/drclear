@@ -93,6 +93,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .apt-chip{height:25px;border-radius:5px;padding:0 7px;font-size:12.5px;font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;cursor:pointer;}
 .apt-chip:hover{opacity:.8;}
+.apt-chip{cursor:grab;}
+.apt-chip.dragging{opacity:.35;cursor:grabbing;}
+.cal-cell.drag-over{background:color-mix(in srgb,var(--primary) 10%,var(--surface));outline:2px dashed var(--primary);outline-offset:-2px;}
 .apt-chip-time{font-size:10.5px;opacity:.75;flex-shrink:0;}
 .apt-more{font-size:11.5px;font-weight:700;color:var(--text-muted);padding:2px 2px;cursor:pointer;}
 .apt-more:hover{color:var(--primary);}
@@ -321,6 +324,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .app-main{flex:1;overflow-y:auto;background:var(--bg);min-width:0;}
 @media(max-width:820px){.sidebar{display:none;}}
 
+/* ══════════ TODO PANEL (sidebar) ══════════ */
+.todo-panel{display:flex;flex-direction:column;gap:4px;padding:0 2px;}
+.todo-sub-label{font-size:10.5px;font-weight:800;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.4px;padding:8px 8px 3px;}
+.todo-item{display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:8px;
+  cursor:pointer;transition:background .12s;}
+.todo-item:hover{background:var(--cal-head-bg);}
+.todo-check{width:15px;height:15px;margin-top:2px;flex-shrink:0;cursor:pointer;accent-color:var(--primary);}
+.todo-item-icon{font-size:13px;margin-top:1px;flex-shrink:0;}
+.todo-item-body{min-width:0;flex:1;}
+.todo-item-time{font-size:11px;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;}
+.todo-item-name{font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+.todo-item.todo-done .todo-item-name{text-decoration:line-through;color:var(--text-muted);}
+.todo-item.todo-followup{background:color-mix(in srgb,#8E44AD 8%,transparent);}
+.todo-item.todo-followup:hover{background:color-mix(in srgb,#8E44AD 15%,transparent);}
+.todo-empty{padding:14px 8px;font-size:12.5px;color:var(--text-muted);text-align:center;}
+
 /* ══════════ STAT CARDS ══════════ */
 .cal-page-inner{padding:22px 26px 40px;max-width:1360px;margin:0 auto;}
 .cal-stats-row{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
@@ -393,6 +414,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <button class="side-nav-item" id="side-list" onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="side-nav-item" id="side-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
     <button class="side-nav-item" id="side-settings" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
+    <div class="sidebar-heading" style="margin-top:20px;">✅ งานวันนี้</div>
+    <div class="todo-panel" id="todoPanel"></div>
   </aside>
   <main class="app-main">
 <!-- ══════════ LIST PAGE ══════════ -->
@@ -605,6 +628,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <label class="form-label">หมายเหตุ</label>
         <textarea class="form-textarea" id="fNotes" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
       </div>
+      <div class="form-row">
+        <label class="form-label">📞 วันที่ติดต่อครั้งถัดไป</label>
+        <input class="form-input" type="date" id="fFollowup">
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn-delete" id="btnDelete" style="display:none" onclick="deleteApt()">🗑 ลบ</button>
@@ -758,7 +785,7 @@ function resetStatusColors(){
   activeStatuses=STATUS_ORDER_DEFAULT.slice();
   applyStatusColors(STATUS_COLORS_DEFAULT);
   populateColorInputs(STATUS_COLORS_DEFAULT);
-  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
   toast('รีเซ็ตสถานะและสีเป็นค่าเริ่มต้นทั้งหมด (รวมลบสถานะที่สร้างเอง)','info');
 }
 function deleteStatus(key){
@@ -776,7 +803,7 @@ function deleteStatus(key){
   activeStatuses=activeStatuses.filter(k=>k!==key);
   saveActiveStatuses();
   saveCustomStatuses();
-  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
   populateColorInputs(loadStatusColors());
   toast(`ลบสถานะ "${label}" แล้ว`,'success');
 }
@@ -814,7 +841,7 @@ function addStatus(label,color){
   colors[key]=color;
   try{localStorage.setItem('statusColors',JSON.stringify(colors));}catch(e){}
   applyStatusColors(colors);
-  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
   populateColorInputs(colors);
   toast(`เพิ่มสถานะ "${label}" แล้ว ✅`,'success');
 }
@@ -985,6 +1012,7 @@ function aptCard(apt){
         ${apt.phone?`<span style="font-size:12px;color:var(--text-muted);">📞 ${apt.phone}</span>`:''}
         ${apt.notes?`<span style="font-size:12px;color:var(--text-muted);">💬 ${apt.notes}</span>`:''}
         ${apt.source?`<span style=\"font-size:12px;color:var(--text-muted);\">🏷️ ${SOURCE_LABELS[apt.source]||apt.source}</span>`:''}
+        ${apt.followup_date?`<span style="font-size:12px;color:#8E44AD;font-weight:700;">📞 ติดต่อ ${fmtDate(apt.followup_date)}</span>`:''}
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -1005,7 +1033,7 @@ function changeStatus(id,sel){
   apt.status=sel.value;
   sel.style.setProperty('--pill-c','var(--status-'+sel.value+')');
   toast(`${apt.patient_name} → ${STATUS_PLAIN[sel.value]} ✅`,'success');
-  renderStatusTabs();renderList();updateStats();
+  renderStatusTabs();renderList();updateStats();renderTodoPanel();
 }
 
 // ─── Row selection ────────────────────────────────────
@@ -1025,10 +1053,61 @@ function applyBulk(){
   let n=0;
   allApts.forEach(a=>{if(selectedIds.has(a.id)){a.status=s;n++;}});
   toast(`อัปเดต ${n} รายการ → ${STATUS_PLAIN[s]} ✅`,'success');
-  selectedIds.clear();updateBulkBar();renderStatusTabs();renderList();updateStats();
+  selectedIds.clear();updateBulkBar();renderStatusTabs();renderList();updateStats();renderTodoPanel();
 }
 
 // ─── Calendar ─────────────────────────────────────────
+// ─── Sidebar "today's tasks" panel ─────────────────────
+function renderTodoPanel(){
+  const box=document.getElementById('todoPanel');
+  if(!box)return;
+  const td=todayStr();
+  const todays=allApts.filter(a=>a.date===td).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const followups=allApts.filter(a=>a.followup_date===td);
+  let html='';
+  if(!todays.length&&!followups.length){
+    html=`<div class="todo-empty">ไม่มีงานวันนี้ 🎉</div>`;
+  }else{
+    if(todays.length){
+      html+=`<div class="todo-sub-label">นัดหมายวันนี้ (${todays.length})</div>`;
+      html+=todays.map(a=>{
+        const done=a.status==='done';
+        return `<div class="todo-item ${done?'todo-done':''}" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
+          <input type="checkbox" class="todo-check" ${done?'checked':''} onclick="event.stopPropagation();toggleTodoDone('${a.id}')" title="ทำเสร็จแล้ว">
+          <div class="todo-item-body">
+            <div class="todo-item-time">${a.time?a.time.slice(0,5):''}</div>
+            <div class="todo-item-name">${a.patient_name}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    if(followups.length){
+      html+=`<div class="todo-sub-label">📞 ต้องติดต่อวันนี้ (${followups.length})</div>`;
+      html+=followups.map(a=>`<div class="todo-item todo-followup" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
+          <span class="todo-item-icon">📞</span>
+          <div class="todo-item-body"><div class="todo-item-name">${a.patient_name}</div></div>
+        </div>`).join('');
+    }
+  }
+  box.innerHTML=html;
+}
+function toggleTodoDone(id){
+  const apt=allApts.find(a=>a.id===id);if(!apt)return;
+  apt.status=apt.status==='done'?'pending':'done';
+  renderTodoPanel();renderCalendar();updateStats();
+  if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
+  if(selectedDate) openDayPanel(selectedDate);
+}
+function rescheduleApt(id,newDate){
+  const apt=allApts.find(a=>a.id===id);
+  if(!apt||apt.date===newDate)return;
+  const oldDate=apt.date;
+  apt.date=newDate;
+  toast(`ย้ายนัดของ ${apt.patient_name} ไปวันที่ ${fmtDate(newDate)} แล้ว ✅`,'success');
+  renderCalendar();updateStats();renderTodoPanel();
+  if(selectedDate===oldDate||selectedDate===newDate) openDayPanel(selectedDate);
+  if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
+}
 function renderCalendar(){
   const y=currentDate.getFullYear(),m=currentDate.getMonth();
   document.getElementById('monthLabel').textContent=TH_MONTHS[m]+' '+(y+543);
@@ -1052,6 +1131,14 @@ function renderCalendar(){
       <button class="cell-add" onclick="event.stopPropagation();openModal('${s}')">+</button></div>
       <div class="cal-chips" id="chips-${s}"></div>`;
     cell.onclick=()=>openDayPanel(s);grid.appendChild(cell);
+    cell.dataset.date=s;
+    cell.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';cell.classList.add('drag-over');};
+    cell.ondragleave=()=>{cell.classList.remove('drag-over');};
+    cell.ondrop=e=>{
+      e.preventDefault();cell.classList.remove('drag-over');
+      const aptId=e.dataTransfer.getData('text/plain');
+      if(aptId) rescheduleApt(aptId,s);
+    };
     const apts=(aptMap[s]||[]).sort((a,b)=>a.time.localeCompare(b.time));
     const ch=cell.querySelector('.cal-chips');
     const MAX_CHIPS=5;
@@ -1061,9 +1148,18 @@ function renderCalendar(){
       const chipColor=statusColorValue(apt.status);
       chip.style.background=chipColor;
       chip.style.color=contrastText(chipColor);
-      chip.title=STATUS_PLAIN[apt.status]||apt.status;
+      chip.title=(STATUS_PLAIN[apt.status]||apt.status)+' · ลากเพื่อย้ายวัน';
+      chip.draggable=true;
       chip.innerHTML=`<span class="apt-chip-time">${apt.time?apt.time.slice(0,5):''}</span>${apt.patient_name}`;
-      chip.onclick=e=>{e.stopPropagation();openModal(s,apt);};ch.appendChild(chip);
+      chip.onclick=e=>{e.stopPropagation();openModal(s,apt);};
+      chip.ondragstart=e=>{
+        e.stopPropagation();
+        e.dataTransfer.setData('text/plain',apt.id);
+        e.dataTransfer.effectAllowed='move';
+        setTimeout(()=>chip.classList.add('dragging'),0);
+      };
+      chip.ondragend=()=>{chip.classList.remove('dragging');};
+      ch.appendChild(chip);
     });
     if(apts.length>MAX_CHIPS){
       const more=document.createElement('div');
@@ -1139,7 +1235,7 @@ function openDayPanel(s){
         <div class="apt-time">${apt.time?apt.time.slice(0,5):'--:--'}</div>
         <div class="apt-info">
           <div class="apt-name">${apt.patient_name}</div>
-          <div class="apt-sub">${PROC_LABELS[apt.procedure_type]||''}${apt.price?' · ฿'+Number(apt.price).toLocaleString():''}${apt.source?' · '+(SOURCE_LABELS[apt.source]||apt.source):''}</div>
+          <div class="apt-sub">${PROC_LABELS[apt.procedure_type]||''}${apt.price?' · ฿'+Number(apt.price).toLocaleString():''}${apt.source?' · '+(SOURCE_LABELS[apt.source]||apt.source):''}${apt.followup_date?' · 📞 ติดต่อ '+fmtDate(apt.followup_date):''}</div>
         </div>
         <div class="apt-status-dot" style="background:var(--status-${apt.status},#F39C12)"></div>
       </div>`).join('');
@@ -1165,6 +1261,7 @@ function openModal(s,apt){
   document.getElementById('fSource').value=apt?(apt.source||''):'';
   document.getElementById('fPrice').value=apt?(apt.price||''):'';
   document.getElementById('fNotes').value=apt?(apt.notes||''):'';
+  document.getElementById('fFollowup').value=apt?(apt.followup_date||''):'';
   document.getElementById('patSuggest').style.display='none';
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -1185,10 +1282,11 @@ function saveApt(){
     source:document.getElementById('fSource').value||null,
     notes:document.getElementById('fNotes').value.trim()||null,
     price:parseFloat(document.getElementById('fPrice').value)||null,
+    followup_date:document.getElementById('fFollowup').value||null,
   };
   if(editingId){const idx=allApts.findIndex(a=>a.id===editingId);if(idx>-1)allApts[idx]=p;toast('แก้ไขนัดหมายเรียบร้อย ✅','success');}
   else{allApts.push(p);toast('เพิ่มนัดหมายเรียบร้อย ✅','success');}
-  closeModal();renderCalendar();updateStats();
+  closeModal();renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate) openDayPanel(selectedDate);
   // refresh list if on list page
   if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
@@ -1197,7 +1295,7 @@ function deleteApt(){
   if(!editingId)return;
   allApts=allApts.filter(a=>a.id!==editingId);
   toast('ลบนัดหมายแล้ว','info');
-  closeModal();renderCalendar();updateStats();
+  closeModal();renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate) openDayPanel(selectedDate);
   if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
 }
@@ -1250,10 +1348,11 @@ function exportExcel(){
       'LINE ID':a.line_id||'',
       'ที่อยู่':a.address||'',
       'แหล่งที่มา':SOURCE_LABELS[a.source]||a.source||'',
+      'วันที่ติดต่อครั้งถัดไป':a.followup_date?fmtDate(a.followup_date):'',
       'หมายเหตุ':a.notes||'',
     }));
   const ws=XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:14},{wch:8},{wch:20},{wch:20},{wch:12},{wch:11},{wch:14},{wch:22},{wch:14},{wch:26},{wch:14},{wch:26}];
+  ws['!cols']=[{wch:14},{wch:8},{wch:20},{wch:20},{wch:12},{wch:11},{wch:14},{wch:22},{wch:14},{wch:26},{wch:14},{wch:20},{wch:26}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'นัดหมาย');
   const fname='นัดหมาย_'+todayStr()+'.xlsx';
@@ -1263,5 +1362,6 @@ function exportExcel(){
 // ─── Init ─────────────────────────────────────────────
 loadStatusColors();
 refreshStatusSelects();
+renderTodoPanel();
 showPage('list');
 </script>
