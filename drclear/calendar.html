@@ -42,9 +42,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .page{display:none;}.page.active{display:block;}
 
 /* ══════════ CALENDAR (compact / Airtable-style) ══════════ */
-.cal-topbar{display:flex;align-items:center;gap:8px;padding:7px 14px;
+.cal-topbar{display:flex;align-items:center;gap:8px;padding:12px 16px;
   background:var(--surface);border-bottom:1px solid var(--cal-border);
-  position:sticky;top:56px;z-index:100;flex-wrap:wrap;}
+  position:relative;z-index:100;flex-wrap:wrap;}
 .cal-month-label{font-size:15px;font-weight:800;border:1px solid transparent;background:none;
   color:var(--text);font-family:var(--font);cursor:pointer;border-radius:6px;padding:5px 8px;
   display:flex;align-items:center;gap:5px;position:relative;}
@@ -154,7 +154,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .panel-empty-icon{font-size:34px;margin-bottom:8px;}
 
 /* ══════════ ALL APPOINTMENTS LIST ══════════ */
-.list-layout{display:flex;flex-direction:column;height:calc(100vh - 56px);}
+.list-layout{display:flex;flex-direction:column;height:100%;}
 
 /* sticky toolbar */
 .list-toolbar{
@@ -303,6 +303,34 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .toast.success{background:#27AE60;color:#fff;}.toast.error{background:#E74C3C;color:#fff;}.toast.info{background:var(--primary);color:#fff;}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+/* ══════════ APP SHELL / SIDEBAR ══════════ */
+.app-shell{display:flex;height:calc(100vh - 56px);}
+.sidebar{width:216px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
+  padding:16px 10px;overflow-y:auto;}
+.sidebar-heading{font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.5px;padding:0 10px;margin-bottom:8px;}
+.side-nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:8px;
+  border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:600;
+  color:var(--text);cursor:pointer;text-align:left;margin-bottom:2px;transition:background .12s;}
+.side-nav-item:hover{background:var(--cal-head-bg);}
+.side-nav-item.active{background:color-mix(in srgb,var(--primary) 14%,var(--surface));color:var(--primary);}
+.app-main{flex:1;overflow-y:auto;background:var(--bg);min-width:0;}
+@media(max-width:820px){.sidebar{display:none;}}
+
+/* ══════════ STAT CARDS ══════════ */
+.cal-page-inner{padding:22px 26px 40px;max-width:1360px;margin:0 auto;}
+.cal-stats-row{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);
+  border-radius:10px;padding:13px 18px;min-width:150px;flex:1;box-shadow:var(--shadow);}
+.stat-card-label{font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:4px;}
+.stat-card-value{font-size:24px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+.stat-today{border-left-color:var(--primary);}
+.stat-week{border-left-color:#8E44AD;}
+.stat-month{border-left-color:#27AE60;}
+.stat-pending{border-left-color:#F39C12;}
+.cal-card{background:var(--surface);border:1px solid var(--cal-border);border-radius:14px;
+  overflow:hidden;box-shadow:var(--shadow);}
+
 /* ══════════ SETTINGS PAGE ══════════ */
 .settings-wrap{max-width:640px;margin:0 auto;padding:28px 20px 60px;}
 .settings-title{font-size:20px;font-weight:800;margin-bottom:4px;}
@@ -343,6 +371,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </nav>
 
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-heading">เมนูหลัก</div>
+    <button class="side-nav-item" id="side-list" onclick="showPage('list')">📋 รายการทั้งหมด</button>
+    <button class="side-nav-item" id="side-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
+    <button class="side-nav-item" id="side-settings" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
+  </aside>
+  <main class="app-main">
 <!-- ══════════ LIST PAGE ══════════ -->
 <div class="page" id="page-list">
   <div class="list-layout">
@@ -381,29 +417,45 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <!-- ══════════ CALENDAR PAGE ══════════ -->
 <div class="page" id="page-calendar">
-  <div class="cal-topbar">
-    <button class="cal-month-label" id="monthLabelBtn" onclick="toggleDatePicker(event)">
-      <span id="monthLabel">–</span><span class="dp-caret">▾</span>
-      <div class="dp-pop" id="datePickerPop" onclick="event.stopPropagation()"></div>
-    </button>
-    <div class="cal-nav-group">
-      <button class="cal-nav-btn" onclick="prevMonth()">&#8249;</button>
-      <button class="cal-nav-btn" onclick="nextMonth()">&#8250;</button>
+  <div class="cal-page-inner">
+    <div class="cal-stats-row">
+      <div class="stat-card stat-today">
+        <div class="stat-card-label">วันนี้</div>
+        <div class="stat-card-value" id="statToday">–</div>
+      </div>
+      <div class="stat-card stat-week">
+        <div class="stat-card-label">สัปดาห์นี้</div>
+        <div class="stat-card-value" id="statWeek">–</div>
+      </div>
+      <div class="stat-card stat-month">
+        <div class="stat-card-label">เดือนนี้</div>
+        <div class="stat-card-value" id="statMonth">–</div>
+      </div>
+      <div class="stat-card stat-pending">
+        <div class="stat-card-label">รอยืนยัน</div>
+        <div class="stat-card-value" id="statPending">–</div>
+      </div>
     </div>
-    <button class="btn-today" onclick="goToday()">Today</button>
-    <div class="cal-mini-stats">
-      <span><b id="statToday">–</b> วันนี้</span>
-      <span><b id="statWeek">–</b> สัปดาห์นี้</span>
-      <span><b id="statMonth">–</b> เดือนนี้</span>
-      <span><b id="statPending">–</b> รอยืนยัน</span>
+    <div class="cal-card">
+      <div class="cal-topbar">
+        <button class="cal-month-label" id="monthLabelBtn" onclick="toggleDatePicker(event)">
+          <span id="monthLabel">–</span><span class="dp-caret">▾</span>
+          <div class="dp-pop" id="datePickerPop" onclick="event.stopPropagation()"></div>
+        </button>
+        <div class="cal-nav-group">
+          <button class="cal-nav-btn" onclick="prevMonth()">&#8249;</button>
+          <button class="cal-nav-btn" onclick="nextMonth()">&#8250;</button>
+        </div>
+        <button class="btn-today" onclick="goToday()">Today</button>
+        <button class="btn-add-apt" onclick="openModal(null)">+ เพิ่มนัดหมาย</button>
+      </div>
+      <div class="cal-weekdays">
+        <div class="cal-wd">อา</div><div class="cal-wd">จ</div><div class="cal-wd">อ</div>
+        <div class="cal-wd">พ</div><div class="cal-wd">พฤ</div><div class="cal-wd">ศ</div><div class="cal-wd">ส</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
     </div>
-    <button class="btn-add-apt" onclick="openModal(null)">+ เพิ่มนัดหมาย</button>
   </div>
-  <div class="cal-weekdays">
-    <div class="cal-wd">อา</div><div class="cal-wd">จ</div><div class="cal-wd">อ</div>
-    <div class="cal-wd">พ</div><div class="cal-wd">พฤ</div><div class="cal-wd">ศ</div><div class="cal-wd">ส</div>
-  </div>
-  <div class="cal-grid" id="calGrid"></div>
 </div>
 
 <!-- ══════════ SETTINGS PAGE ══════════ -->
@@ -440,6 +492,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
   </div>
+</div>
+  </main>
 </div>
 
 <!-- Day Panel -->
@@ -657,8 +711,10 @@ let activeFilter='all', selectedIds=new Set();
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.side-nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
+  document.getElementById('side-'+name).classList.add('active');
   if(name==='list'){selectedIds.clear();renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
   if(name==='settings'){populateColorInputs(loadStatusColors());}
