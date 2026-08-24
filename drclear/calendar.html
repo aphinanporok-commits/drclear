@@ -70,14 +70,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cal-wd{text-align:center;padding:10px 4px;font-size:13px;font-weight:800;color:#8A9BAE;letter-spacing:.5px;}
 .cal-wd:first-child{color:#E74C3C;}.cal-wd:last-child{color:#2980B9;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--cal-border);gap:1px;}
-.cal-cell{background:var(--surface);min-height:132px;padding:7px 8px 6px;cursor:pointer;transition:background .12s;position:relative;}
+.cal-cell{background:var(--surface);min-height:132px;padding:10px 12px 10px;cursor:pointer;transition:background .12s;position:relative;}
 .cal-cell:hover{background:var(--cal-head-bg);}
 .cal-cell.other-month{background:color-mix(in srgb,var(--surface) 60%,var(--bg) 40%);}
 .cal-cell.other-month .cell-num{color:var(--cal-other);}
 .cal-cell.is-today .cell-num{background:var(--primary);color:#fff!important;border-radius:50%;
   width:25px;height:25px;display:flex;align-items:center;justify-content:center;}
 .cal-cell.selected{background:color-mix(in srgb,var(--primary) 8%,var(--surface));}
-.cell-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+.cell-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .cell-num{font-size:15px;font-weight:800;color:var(--text);line-height:1;}
 .cal-cell.other-month .cell-num{color:var(--cal-other)!important;}
 .cal-cell:nth-child(7n+1) .cell-num{color:#E74C3C;}
