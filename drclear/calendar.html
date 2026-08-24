@@ -1102,6 +1102,8 @@ function rescheduleApt(id,newDate){
   const apt=allApts.find(a=>a.id===id);
   if(!apt||apt.date===newDate)return;
   const oldDate=apt.date;
+  const ok=confirm(`ย้ายนัดของ "${apt.patient_name}"\nจากวันที่ ${fmtDate(oldDate)} ไปเป็นวันที่ ${fmtDate(newDate)}\n\nยืนยันการย้ายนัดหมายหรือไม่?`);
+  if(!ok)return;
   apt.date=newDate;
   toast(`ย้ายนัดของ ${apt.patient_name} ไปวันที่ ${fmtDate(newDate)} แล้ว ✅`,'success');
   renderCalendar();updateStats();renderTodoPanel();
