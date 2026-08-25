@@ -970,13 +970,10 @@ async function pullFromSupabaseOnLoad(){
     }
     const {data,error}=await sb.from('appointments').select('*');
     if(error){console.error('appointments fetch error',error);return;}
-    if(data&&data.length){
-      allApts=data;
-      saveAppointmentsLocal();
-    }else if(allApts.length){
-      const {error:seedErr}=await sb.from('appointments').insert(allApts);
-      if(seedErr)console.error('seed insert error',seedErr);
-    }
+    // DB is the source of truth once reachable — an empty table means genuinely zero
+    // appointments (don't push fake/demo data into the real shared database).
+    allApts=data||[];
+    saveAppointmentsLocal();
     refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
     populateColorInputs(loadStatusColors());
     if(selectedDate)openDayPanel(selectedDate);
@@ -991,8 +988,13 @@ const patients=[
 ];
 
 let currentDate=new Date(), editingId=null, selectedDate=null;
-let nextId=Math.max(200,...allApts.map(a=>parseInt(a.id)||0));
 let activeFilter='all', selectedIds=new Set();
+function genId(){
+  if(window.crypto&&crypto.randomUUID)return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);
+  });
+}
 
 // ─── Page nav ─────────────────────────────────────────
 function showPage(name){
@@ -1388,7 +1390,7 @@ function saveApt(){
   const time=document.getElementById('fTime').value;
   if(!name||!date||!time){toast('กรุณากรอกข้อมูลให้ครบ','error');return;}
   const p={
-    id:editingId||(String(++nextId)),patient_name:name,patient_id:null,date,
+    id:editingId||genId(),patient_name:name,patient_id:null,date,
     time:time+':00',procedure_type:document.getElementById('fProc').value,
     status:document.getElementById('fStatus').value,
     phone:document.getElementById('fPhone').value.trim()||null,
