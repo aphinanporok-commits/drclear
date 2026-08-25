@@ -120,8 +120,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dp-day.today{font-weight:800;color:var(--primary);}
 .dp-day.selected{background:var(--primary);color:#fff!important;font-weight:700;}
 
-.proc-badge{background-color:color-mix(in srgb,var(--proc-c,#888) 18%,var(--surface));
-  color:color-mix(in srgb,var(--proc-c,#888) 78%,black);}
+.proc-badge{background-color:var(--cal-head-bg);color:var(--text-muted);}
 
 .day-panel{position:fixed;right:0;top:56px;bottom:0;width:340px;background:var(--surface);
   border-left:1px solid var(--cal-border);box-shadow:-4px 0 20px rgba(0,0,0,.12);
@@ -1345,7 +1344,7 @@ function aptCard(apt){
         <span class="apt-card-name" style="font-size:15px;font-weight:700;">${apt.patient_name}</span>
       </div>
       <div class="apt-card-sub">
-        <span class="proc-badge" style="--proc-c:var(--proc-${apt.procedure_type});padding:2px 7px;border-radius:5px;font-size:11px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
+        <span class="proc-badge" style="padding:2px 7px;border-radius:5px;font-size:11px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
         ${apt.phone?`<span style="font-size:12px;color:var(--text-muted);">📞 ${apt.phone}</span>`:''}
         ${apt.notes?`<span style="font-size:12px;color:var(--text-muted);">💬 ${apt.notes}</span>`:''}
         ${apt.source?`<span style=\"font-size:12px;color:var(--text-muted);\">🏷️ ${SOURCE_LABELS[apt.source]||apt.source}</span>`:''}
@@ -1409,8 +1408,9 @@ function renderTodoPanel(){
   }else{
     if(todays.length){
       html+=`<div class="todo-sub-label">นัดหมายวันนี้ (${todays.length})</div>`;
+      const doneTodos=loadTodoDoneSet();
       html+=todays.map(a=>{
-        const done=a.status==='done';
+        const done=doneTodos.has(a.id);
         return `<div class="todo-item ${done?'todo-done':''}" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
           <input type="checkbox" class="todo-check" ${done?'checked':''} onclick="event.stopPropagation();toggleTodoDone('${a.id}')" title="ทำเสร็จแล้ว">
           <div class="todo-item-body">
@@ -1430,13 +1430,18 @@ function renderTodoPanel(){
   }
   box.innerHTML=html;
 }
+function todoDoneKey(){return 'todoDone_'+todayStr();}
+function loadTodoDoneSet(){
+  try{return new Set(JSON.parse(localStorage.getItem(todoDoneKey())||'[]'));}catch(e){return new Set();}
+}
+function saveTodoDoneSet(s){
+  try{localStorage.setItem(todoDoneKey(),JSON.stringify(Array.from(s)));}catch(e){}
+}
 function toggleTodoDone(id){
-  const apt=allApts.find(a=>a.id===id);if(!apt)return;
-  apt.status=apt.status==='done'?'pending':'done';
-  saveAppointments();
-  renderTodoPanel();renderCalendar();updateStats();
-  if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
-  if(selectedDate) openDayPanel(selectedDate);
+  const s=loadTodoDoneSet();
+  if(s.has(id))s.delete(id);else s.add(id);
+  saveTodoDoneSet(s);
+  renderTodoPanel();
 }
 function rescheduleApt(id,newDate){
   const apt=allApts.find(a=>a.id===id);
