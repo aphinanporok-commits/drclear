@@ -355,7 +355,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .settings-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow);}
 .settings-card-title{font-size:14px;font-weight:800;margin-bottom:3px;}
-.settings-card-desc{font-size:12px;color:var(--text-muted);margin-bottom:14px;}
+.settings-card-desc{font-size:12px;color:var(--text-muted);margin-bottom:0;}
+.settings-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  cursor:pointer;user-select:none;}
+.settings-card-body{margin-top:14px;overflow:hidden;}
+.settings-card-body.collapsed{display:none;}
+.settings-card-toggle{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text-muted);
+  width:28px;height:28px;border-radius:7px;font-size:13px;cursor:pointer;transition:transform .15s;}
+.settings-card-toggle:hover{border-color:var(--primary);color:var(--primary);}
+.settings-card-toggle.collapsed{transform:rotate(-90deg);}
 .color-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);}
 .color-row:last-of-type{border-bottom:none;}
 .color-row-label{flex:1;font-size:13px;font-weight:600;}
@@ -498,35 +506,49 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="settings-title">ตั้งค่าระบบ</div>
     <div class="settings-subtitle">ปรับแต่งสีสถานะนัดหมายให้เข้ากับสไตล์ของคลินิก</div>
     <div class="settings-card">
-      <div class="settings-card-title">สีสถานะนัดหมาย</div>
-      <div class="settings-card-desc">เลือกสีประจำแต่ละสถานะ ระบบจะนำไปใช้กับจุดสถานะ ป้ายสถานะ และตัวเลือกสถานะทั้งหมด</div>
-      <div id="colorRowsContainer"></div>
-      <button class="btn-add-status" id="btnShowAddStatus" onclick="showAddStatusForm()">➕ เพิ่มสถานะใหม่</button>
-      <div class="add-status-row" id="addStatusRow" style="display:none;">
-        <input type="text" class="form-input" id="newStatusLabel" placeholder="ชื่อสถานะใหม่ เช่น กำลังรักษา">
-        <input type="color" id="newStatusColor" value="#8E44AD">
-        <button class="btn-settings-save" onclick="confirmAddStatus()">✔ เพิ่ม</button>
-        <button class="btn-settings-reset" onclick="cancelAddStatus()">ยกเลิก</button>
+      <div class="settings-card-head" onclick="toggleSettingsCard('status')">
+        <div>
+          <div class="settings-card-title">สีสถานะนัดหมาย</div>
+          <div class="settings-card-desc">เลือกสีประจำแต่ละสถานะ ระบบจะนำไปใช้กับจุดสถานะ ป้ายสถานะ และตัวเลือกสถานะทั้งหมด</div>
+        </div>
+        <button class="settings-card-toggle" id="toggleStatus" title="ย่อ/ขยาย">▾</button>
       </div>
-      <div class="settings-actions">
-        <button class="btn-settings-save" onclick="saveStatusColors()">💾 บันทึกสี</button>
-        <button class="btn-settings-reset" onclick="resetStatusColors()">↺ ค่าเริ่มต้น (คืนสถานะที่ลบด้วย)</button>
+      <div class="settings-card-body" id="bodyStatus">
+        <div id="colorRowsContainer"></div>
+        <button class="btn-add-status" id="btnShowAddStatus" onclick="showAddStatusForm()">➕ เพิ่มสถานะใหม่</button>
+        <div class="add-status-row" id="addStatusRow" style="display:none;">
+          <input type="text" class="form-input" id="newStatusLabel" placeholder="ชื่อสถานะใหม่ เช่น กำลังรักษา">
+          <input type="color" id="newStatusColor" value="#8E44AD">
+          <button class="btn-settings-save" onclick="confirmAddStatus()">✔ เพิ่ม</button>
+          <button class="btn-settings-reset" onclick="cancelAddStatus()">ยกเลิก</button>
+        </div>
+        <div class="settings-actions">
+          <button class="btn-settings-save" onclick="saveStatusColors()">💾 บันทึกสี</button>
+          <button class="btn-settings-reset" onclick="resetStatusColors()">↺ ค่าเริ่มต้น (คืนสถานะที่ลบด้วย)</button>
+        </div>
       </div>
     </div>
     <div class="settings-card">
-      <div class="settings-card-title">ประเภทการรักษา</div>
-      <div class="settings-card-desc">เพิ่ม/ลบ/กำหนดสีประเภทการรักษา ระบบจะนำไปใช้กับป้ายประเภทและตัวเลือกในฟอร์มนัดหมายทั้งหมด</div>
-      <div id="procRowsContainer"></div>
-      <button class="btn-add-status" id="btnShowAddProc" onclick="showAddProcForm()">➕ เพิ่มประเภทการรักษาใหม่</button>
-      <div class="add-status-row" id="addProcRow" style="display:none;">
-        <input type="text" class="form-input" id="newProcLabel" placeholder="ชื่อประเภทใหม่ เช่น รีเทนเนอร์">
-        <input type="color" id="newProcColor" value="#8E44AD">
-        <button class="btn-settings-save" onclick="confirmAddProc()">✔ เพิ่ม</button>
-        <button class="btn-settings-reset" onclick="cancelAddProc()">ยกเลิก</button>
+      <div class="settings-card-head" onclick="toggleSettingsCard('proc')">
+        <div>
+          <div class="settings-card-title">ประเภทการรักษา</div>
+          <div class="settings-card-desc">เพิ่ม/ลบ/กำหนดสีประเภทการรักษา ระบบจะนำไปใช้กับป้ายประเภทและตัวเลือกในฟอร์มนัดหมายทั้งหมด</div>
+        </div>
+        <button class="settings-card-toggle" id="toggleProc" title="ย่อ/ขยาย">▾</button>
       </div>
-      <div class="settings-actions">
-        <button class="btn-settings-save" onclick="saveProcColors()">💾 บันทึกสี</button>
-        <button class="btn-settings-reset" onclick="resetProcColors()">↺ ค่าเริ่มต้น (คืนประเภทที่ลบด้วย)</button>
+      <div class="settings-card-body" id="bodyProc">
+        <div id="procRowsContainer"></div>
+        <button class="btn-add-status" id="btnShowAddProc" onclick="showAddProcForm()">➕ เพิ่มประเภทการรักษาใหม่</button>
+        <div class="add-status-row" id="addProcRow" style="display:none;">
+          <input type="text" class="form-input" id="newProcLabel" placeholder="ชื่อประเภทใหม่ เช่น รีเทนเนอร์">
+          <input type="color" id="newProcColor" value="#8E44AD">
+          <button class="btn-settings-save" onclick="confirmAddProc()">✔ เพิ่ม</button>
+          <button class="btn-settings-reset" onclick="cancelAddProc()">ยกเลิก</button>
+        </div>
+        <div class="settings-actions">
+          <button class="btn-settings-save" onclick="saveProcColors()">💾 บันทึกสี</button>
+          <button class="btn-settings-reset" onclick="resetProcColors()">↺ ค่าเริ่มต้น (คืนประเภทที่ลบด้วย)</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1230,7 +1252,33 @@ function showPage(name){
   document.getElementById('side-'+name).classList.add('active');
   if(name==='list'){selectedIds.clear();renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
-  if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());}
+  if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());applySettingsCardCollapse();}
+}
+function loadSettingsCollapseState(){
+  try{return JSON.parse(localStorage.getItem('settingsCardCollapsed')||'{}');}catch(e){return {};}
+}
+function applySettingsCardCollapse(){
+  const state=loadSettingsCollapseState();
+  ['status','proc'].forEach(k=>{
+    const body=document.getElementById('body'+(k==='status'?'Status':'Proc'));
+    const btn=document.getElementById('toggle'+(k==='status'?'Status':'Proc'));
+    if(!body||!btn)return;
+    const collapsed=!!state[k];
+    body.classList.toggle('collapsed',collapsed);
+    btn.classList.toggle('collapsed',collapsed);
+  });
+}
+function toggleSettingsCard(k){
+  const suffix=k==='status'?'Status':'Proc';
+  const body=document.getElementById('body'+suffix);
+  const btn=document.getElementById('toggle'+suffix);
+  if(!body||!btn)return;
+  const collapsed=!body.classList.contains('collapsed');
+  body.classList.toggle('collapsed',collapsed);
+  btn.classList.toggle('collapsed',collapsed);
+  const state=loadSettingsCollapseState();
+  state[k]=collapsed;
+  try{localStorage.setItem('settingsCardCollapsed',JSON.stringify(state));}catch(e){}
 }
 
 // ─── Helpers ──────────────────────────────────────────
