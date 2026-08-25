@@ -779,6 +779,7 @@ function resetStatusColors(){
   const customKeys=Object.keys(STATUS_PLAIN).filter(k=>!STATUS_ORDER_DEFAULT.includes(k));
   if(customKeys.length){
     allApts.forEach(a=>{if(customKeys.includes(a.status)) a.status='pending';});
+    saveAppointments();
     customKeys.forEach(k=>{delete STATUS_LBL[k];delete STATUS_PLAIN[k];delete STATUS_COLORS_DEFAULT[k];delete STATUS_ID_SUFFIX[k];});
   }
   try{localStorage.removeItem('statusColors');localStorage.removeItem('activeStatuses');localStorage.removeItem('customStatuses');}catch(e){}
@@ -797,6 +798,7 @@ function deleteStatus(key){
     const ok=confirm(`มีนัดหมาย ${inUse.length} รายการที่ใช้สถานะ "${label}" อยู่\nหากลบ ระบบจะเปลี่ยนรายการเหล่านั้นเป็นสถานะ "${STATUS_PLAIN[fallback]}" แทน\n\nต้องการลบสถานะ "${label}" ถาวรหรือไม่?`);
     if(!ok)return;
     inUse.forEach(a=>{a.status=fallback;});
+    saveAppointments();
   }else{
     if(!confirm(`ต้องการลบสถานะ "${label}" ถาวรหรือไม่?`))return;
   }
@@ -858,7 +860,7 @@ const DAY_SHORT=['อา','จ','อ','พ','พฤ','ศ','ส'];
 const today=new Date(), Y=today.getFullYear(), M=today.getMonth();
 function ds(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
 
-let allApts=[
+const DEMO_APTS=[
   {id:'1',patient_name:'สมชาย เจริญสุข',  date:ds(Y,M,today.getDate()),   time:'09:00:00',procedure_type:'aligner',   status:'confirmed',price:3500, phone:'081-234-5678',notes:''},
   {id:'2',patient_name:'วรรณา มีสุข',       date:ds(Y,M,today.getDate()),   time:'10:30:00',procedure_type:'whitening',status:'pending',  price:2000, phone:'089-123-4567',notes:'นัดครั้งที่ 2'},
   {id:'3',patient_name:'ประทีป ดีงาม',      date:ds(Y,M,today.getDate()),   time:'14:00:00',procedure_type:'scan',      status:'confirmed',price:1500, phone:'062-345-6789',notes:''},
@@ -873,6 +875,21 @@ let allApts=[
   {id:'12',patient_name:'สมชาย เจริญสุข',  date:ds(Y,M,today.getDate()-3), time:'09:00:00',procedure_type:'aligner',  status:'done',     price:3500, phone:'081-234-5678',notes:'ครั้งที่ 3'},
   {id:'13',patient_name:'วรรณา มีสุข',       date:ds(Y,M,today.getDate()-5), time:'11:00:00',procedure_type:'whitening',status:'cancelled',price:2000, phone:'089-123-4567',notes:'ยกเลิกเอง'},
 ];
+// ─── Appointment persistence (localStorage) ───
+function loadAppointments(){
+  try{
+    const saved=localStorage.getItem('allApts');
+    if(saved){
+      const arr=JSON.parse(saved);
+      if(Array.isArray(arr)) return arr;
+    }
+  }catch(e){}
+  return DEMO_APTS.slice();
+}
+function saveAppointments(){
+  try{localStorage.setItem('allApts',JSON.stringify(allApts));}catch(e){}
+}
+let allApts=loadAppointments();
 const patients=[
   {id:'p1',name:'สมชาย เจริญสุข',phone:'081-234-5678'},
   {id:'p2',name:'วรรณา มีสุข',   phone:'089-123-4567'},
@@ -881,7 +898,8 @@ const patients=[
   {id:'p5',name:'มาลี สดใส',      phone:'092-678-9012'},
 ];
 
-let currentDate=new Date(), editingId=null, selectedDate=null, nextId=200;
+let currentDate=new Date(), editingId=null, selectedDate=null;
+let nextId=Math.max(200,...allApts.map(a=>parseInt(a.id)||0));
 let activeFilter='all', selectedIds=new Set();
 
 // ─── Page nav ─────────────────────────────────────────
@@ -1031,6 +1049,7 @@ function aptCard(apt){
 function changeStatus(id,sel){
   const apt=allApts.find(a=>a.id===id);if(!apt)return;
   apt.status=sel.value;
+  saveAppointments();
   sel.style.setProperty('--pill-c','var(--status-'+sel.value+')');
   toast(`${apt.patient_name} → ${STATUS_PLAIN[sel.value]} ✅`,'success');
   renderStatusTabs();renderList();updateStats();renderTodoPanel();
@@ -1052,6 +1071,7 @@ function applyBulk(){
   if(!s){toast('กรุณาเลือกสถานะ','error');return;}
   let n=0;
   allApts.forEach(a=>{if(selectedIds.has(a.id)){a.status=s;n++;}});
+  saveAppointments();
   toast(`อัปเดต ${n} รายการ → ${STATUS_PLAIN[s]} ✅`,'success');
   selectedIds.clear();updateBulkBar();renderStatusTabs();renderList();updateStats();renderTodoPanel();
 }
@@ -1094,6 +1114,7 @@ function renderTodoPanel(){
 function toggleTodoDone(id){
   const apt=allApts.find(a=>a.id===id);if(!apt)return;
   apt.status=apt.status==='done'?'pending':'done';
+  saveAppointments();
   renderTodoPanel();renderCalendar();updateStats();
   if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
   if(selectedDate) openDayPanel(selectedDate);
@@ -1105,6 +1126,7 @@ function rescheduleApt(id,newDate){
   const ok=confirm(`ย้ายนัดของ "${apt.patient_name}"\nจากวันที่ ${fmtDate(oldDate)} ไปเป็นวันที่ ${fmtDate(newDate)}\n\nยืนยันการย้ายนัดหมายหรือไม่?`);
   if(!ok)return;
   apt.date=newDate;
+  saveAppointments();
   toast(`ย้ายนัดของ ${apt.patient_name} ไปวันที่ ${fmtDate(newDate)} แล้ว ✅`,'success');
   renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate===oldDate||selectedDate===newDate) openDayPanel(selectedDate);
@@ -1288,6 +1310,7 @@ function saveApt(){
   };
   if(editingId){const idx=allApts.findIndex(a=>a.id===editingId);if(idx>-1)allApts[idx]=p;toast('แก้ไขนัดหมายเรียบร้อย ✅','success');}
   else{allApts.push(p);toast('เพิ่มนัดหมายเรียบร้อย ✅','success');}
+  saveAppointments();
   closeModal();renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate) openDayPanel(selectedDate);
   // refresh list if on list page
@@ -1296,6 +1319,7 @@ function saveApt(){
 function deleteApt(){
   if(!editingId)return;
   allApts=allApts.filter(a=>a.id!==editingId);
+  saveAppointments();
   toast('ลบนัดหมายแล้ว','info');
   closeModal();renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate) openDayPanel(selectedDate);
