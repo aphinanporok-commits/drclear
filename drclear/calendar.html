@@ -1287,7 +1287,7 @@ function dateStr(d){return ds(d.getFullYear(),d.getMonth(),d.getDate());}
 function addDays(s,n){const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return dateStr(d);}
 function fmtDate(s){
   const d=new Date(s+'T00:00:00');
-  return `${d.getDate()} ${TH_MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()+543}`;
+  return `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
 }
 function fmtDateLong(s){
   const d=new Date(s+'T00:00:00');
