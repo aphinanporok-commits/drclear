@@ -411,6 +411,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .link-row-note{min-width:0;flex:1;font-size:12.5px;color:var(--text-muted);font-style:italic;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px;}
 .link-row-note:empty{visibility:hidden;}
+.link-row-note:not(:empty){cursor:pointer;}
+.link-row-note:not(:empty):hover{color:var(--primary);}
+.link-row-note.expanded{white-space:normal;overflow:visible;text-overflow:clip;
+  background:color-mix(in srgb,var(--primary) 6%,transparent);border-radius:6px;padding:6px 8px;}
 .link-row-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .btn-link-open{background:none;border:1.5px solid var(--border);color:var(--text-muted);
   border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:var(--font);white-space:nowrap;}
@@ -1175,7 +1179,7 @@ function renderLinksPage(){
         <div class="link-row-label">${l.label}</div>
         <a class="link-row-url" href="${l.url}" target="_blank" rel="noopener">${l.url}</a>
       </div>
-      <div class="link-row-note" title="${l.note||''}">${l.note||''}</div>
+      <div class="link-row-note" onclick="toggleNoteExpand(this)" title="${l.note?'กดเพื่อดูโน้ตเต็ม':''}">${l.note||''}</div>
       <div class="link-row-actions">
         <a class="btn-link-open" href="${l.url}" target="_blank" rel="noopener">เปิดลิงก์ ↗</a>
         <button class="btn-link-edit" onclick="editLink('${l.id}')" title="แก้ไข">✏️</button>
@@ -1214,6 +1218,10 @@ function confirmAddLink(){
   pushSettingsToDB();
   renderLinksPage();
   cancelAddLink();
+}
+function toggleNoteExpand(el){
+  if(!el.textContent.trim())return;
+  el.classList.toggle('expanded');
 }
 function editLink(id){
   const l=quickLinks.find(x=>x.id===id);
