@@ -120,16 +120,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dp-day.today{font-weight:800;color:var(--primary);}
 .dp-day.selected{background:var(--primary);color:#fff!important;font-weight:700;}
 
-.pc-aligner   {background:#D6EAF8;color:#1A5276;}
-.pc-whitening {background:#FEF9E7;color:#7D6608;}
-.pc-filling   {background:#D5F5E3;color:#1E6B3B;}
-.pc-extraction{background:#FDEDEC;color:#A93226;}
-.pc-implant   {background:#F4ECF7;color:#6C3483;}
-.pc-scaling   {background:#EAF2FF;color:#154360;}
-.pc-denture   {background:#FDF2E9;color:#784212;}
-.pc-scan      {background:#E8F8F5;color:#0E6655;}
-.pc-checkup   {background:#EAFAF1;color:#186A3B;}
-.pc-other     {background:#F2F3F4;color:#424949;}
+.proc-badge{background-color:color-mix(in srgb,var(--proc-c,#888) 18%,var(--surface));
+  color:color-mix(in srgb,var(--proc-c,#888) 78%,black);}
 
 .day-panel{position:fixed;right:0;top:56px;bottom:0;width:340px;background:var(--surface);
   border-left:1px solid var(--cal-border);box-shadow:-4px 0 20px rgba(0,0,0,.12);
@@ -522,6 +514,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <button class="btn-settings-reset" onclick="resetStatusColors()">↺ ค่าเริ่มต้น (คืนสถานะที่ลบด้วย)</button>
       </div>
     </div>
+    <div class="settings-card">
+      <div class="settings-card-title">ประเภทการรักษา</div>
+      <div class="settings-card-desc">เพิ่ม/ลบ/กำหนดสีประเภทการรักษา ระบบจะนำไปใช้กับป้ายประเภทและตัวเลือกในฟอร์มนัดหมายทั้งหมด</div>
+      <div id="procRowsContainer"></div>
+      <button class="btn-add-status" id="btnShowAddProc" onclick="showAddProcForm()">➕ เพิ่มประเภทการรักษาใหม่</button>
+      <div class="add-status-row" id="addProcRow" style="display:none;">
+        <input type="text" class="form-input" id="newProcLabel" placeholder="ชื่อประเภทใหม่ เช่น รีเทนเนอร์">
+        <input type="color" id="newProcColor" value="#8E44AD">
+        <button class="btn-settings-save" onclick="confirmAddProc()">✔ เพิ่ม</button>
+        <button class="btn-settings-reset" onclick="cancelAddProc()">ยกเลิก</button>
+      </div>
+      <div class="settings-actions">
+        <button class="btn-settings-save" onclick="saveProcColors()">💾 บันทึกสี</button>
+        <button class="btn-settings-reset" onclick="resetProcColors()">↺ ค่าเริ่มต้น (คืนประเภทที่ลบด้วย)</button>
+      </div>
+    </div>
   </div>
 </div>
   </main>
@@ -649,9 +657,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 const PROC_LABELS={aligner:'จัดฟัน Clear Aligner',whitening:'ฟอกสีฟัน',filling:'อุดฟัน',
   extraction:'ถอนฟัน',implant:'รากฟันเทียม',scaling:'ขูดหินปูน',
   denture:'ทำฟันปลอม',scan:'แสกนฟัน (3D Scan)',checkup:'ตรวจฟัน',other:'อื่นๆ'};
-const PROC_CLASS={aligner:'pc-aligner',whitening:'pc-whitening',filling:'pc-filling',
-  extraction:'pc-extraction',implant:'pc-implant',scaling:'pc-scaling',
-  denture:'pc-denture',scan:'pc-scan',checkup:'pc-checkup',other:'pc-other'};
+const PROC_ICON={checkup:'🦷',aligner:'😁',whitening:'✨',filling:'🔧',extraction:'❌',
+  implant:'🦴',scaling:'🧹',denture:'👄',scan:'🦷',other:'📋'};
+const PROC_ORDER_DEFAULT=['checkup','aligner','whitening','filling','extraction','implant','scaling','denture','scan','other'];
+const PROC_COLORS_DEFAULT={checkup:'#27AE60',aligner:'#2E86C1',whitening:'#B7950B',filling:'#229954',
+  extraction:'#E74C3C',implant:'#8E44AD',scaling:'#2874A6',denture:'#CA6F1E',scan:'#17A589',other:'#839192'};
+const PROC_ID_SUFFIX={checkup:'Checkup',aligner:'Aligner',whitening:'Whitening',filling:'Filling',
+  extraction:'Extraction',implant:'Implant',scaling:'Scaling',denture:'Denture',scan:'Scan',other:'Other'};
 const STATUS_DOT={confirmed:'dot-confirmed',pending:'dot-pending',done:'dot-done',cancelled:'dot-cancelled'};
 const STATUS_LBL={pending:'⏳ รอยืนยัน',confirmed:'✅ ยืนยันแล้ว',done:'🏁 เสร็จแล้ว',cancelled:'❌ ยกเลิก'};
 const STATUS_PLAIN={pending:'รอยืนยัน',confirmed:'ยืนยันแล้ว',done:'เสร็จแล้ว',cancelled:'ยกเลิก'};
@@ -854,7 +866,186 @@ function addStatus(label,color){
 }
 document.addEventListener('input',e=>{
   if(e.target.matches('.color-row input[type=color]')) updateColorPreviews();
+  if(e.target.matches('.proc-color-row input[type=color]')) updateProcColorPreviews();
 });
+
+// ─── Procedure types (custom, persisted beyond the fixed 10) ───
+function loadCustomProcTypes(){
+  try{
+    const saved=localStorage.getItem('customProcTypes');
+    if(saved){
+      const arr=JSON.parse(saved);
+      if(Array.isArray(arr)) arr.forEach(cp=>{
+        if(cp&&cp.key&&cp.label){
+          PROC_LABELS[cp.key]=cp.label;
+          PROC_ICON[cp.key]=cp.icon||'📋';
+          PROC_COLORS_DEFAULT[cp.key]=cp.color||'#8E44AD';
+          PROC_ID_SUFFIX[cp.key]=cp.key;
+        }
+      });
+    }
+  }catch(e){}
+}
+function saveCustomProcTypes(){
+  const custom=activeProcTypes.filter(k=>!PROC_ORDER_DEFAULT.includes(k))
+    .map(k=>({key:k,label:PROC_LABELS[k]||k,icon:PROC_ICON[k]||'📋',color:PROC_COLORS_DEFAULT[k]||'#8E44AD'}));
+  try{localStorage.setItem('customProcTypes',JSON.stringify(custom));}catch(e){}
+}
+loadCustomProcTypes();
+function procColorValue(key){
+  const v=getComputedStyle(document.documentElement).getPropertyValue('--proc-'+key).trim();
+  return v||PROC_COLORS_DEFAULT[key]||'#888888';
+}
+function applyProcColors(colors){
+  const root=document.documentElement;
+  Object.keys(PROC_COLORS_DEFAULT).forEach(k=>{
+    root.style.setProperty('--proc-'+k,(colors&&colors[k])||PROC_COLORS_DEFAULT[k]);
+  });
+}
+function loadProcColors(){
+  let colors=PROC_COLORS_DEFAULT;
+  try{
+    const saved=localStorage.getItem('procColors');
+    if(saved) colors=Object.assign({},PROC_COLORS_DEFAULT,JSON.parse(saved));
+  }catch(e){}
+  applyProcColors(colors);
+  return colors;
+}
+function loadActiveProcTypes(){
+  try{
+    const saved=localStorage.getItem('activeProcTypes');
+    if(saved){const arr=JSON.parse(saved);if(Array.isArray(arr)&&arr.length) return arr.filter(k=>PROC_LABELS[k]!==undefined);}
+  }catch(e){}
+  return PROC_ORDER_DEFAULT.slice();
+}
+function saveActiveProcTypes(){
+  try{localStorage.setItem('activeProcTypes',JSON.stringify(activeProcTypes));}catch(e){}
+}
+let activeProcTypes=loadActiveProcTypes();
+function procOptionsHTML(selectedKey){
+  return activeProcTypes.map(k=>`<option value="${k}" ${k===selectedKey?'selected':''}>${PROC_ICON[k]||'📋'} ${PROC_LABELS[k]}</option>`).join('');
+}
+function refreshProcSelects(){
+  const fProc=document.getElementById('fProc');
+  if(fProc){const cur=fProc.value;fProc.innerHTML=procOptionsHTML(null);if(activeProcTypes.includes(cur))fProc.value=cur;}
+}
+function renderProcSettingsRows(){
+  const box=document.getElementById('procRowsContainer');
+  if(!box)return;
+  box.innerHTML=activeProcTypes.map(k=>{
+    const suf=PROC_ID_SUFFIX[k];
+    return `<div class="color-row proc-color-row" data-proc="${k}">
+      <span class="color-row-label">${PROC_ICON[k]||'📋'} ${PROC_LABELS[k]}</span>
+      <span class="color-row-preview" id="procPreview${suf}">ตัวอย่าง</span>
+      <input type="color" id="procColor${suf}" data-proc="${k}">
+      <button class="btn-status-delete" title="ลบประเภทนี้" onclick="deleteProcType('${k}')">🗑</button>
+    </div>`;
+  }).join('') || `<div class="settings-card-desc">ไม่มีประเภทการรักษาเหลืออยู่ กด "ค่าเริ่มต้น" เพื่อคืนทั้งหมด</div>`;
+}
+function populateProcColorInputs(colors){
+  renderProcSettingsRows();
+  activeProcTypes.forEach(k=>{
+    const el=document.getElementById('procColor'+PROC_ID_SUFFIX[k]);
+    if(el) el.value=colors[k]||PROC_COLORS_DEFAULT[k];
+  });
+  updateProcColorPreviews();
+}
+function updateProcColorPreviews(){
+  activeProcTypes.forEach(k=>{
+    const suf=PROC_ID_SUFFIX[k];
+    const input=document.getElementById('procColor'+suf);
+    const preview=document.getElementById('procPreview'+suf);
+    if(!input||!preview)return;
+    preview.style.background=input.value;
+    preview.style.color='#fff';
+  });
+}
+function saveProcColors(){
+  const colors=Object.assign({},PROC_COLORS_DEFAULT);
+  activeProcTypes.forEach(k=>{
+    const el=document.getElementById('procColor'+PROC_ID_SUFFIX[k]);
+    if(el) colors[k]=el.value;
+  });
+  try{localStorage.setItem('procColors',JSON.stringify(colors));}catch(e){}
+  applyProcColors(colors);
+  pushSettingsToDB();
+  toast('บันทึกสีประเภทการรักษาเรียบร้อย ✅','success');
+}
+function resetProcColors(){
+  const customKeys=Object.keys(PROC_LABELS).filter(k=>!PROC_ORDER_DEFAULT.includes(k));
+  if(customKeys.length){
+    allApts.forEach(a=>{if(customKeys.includes(a.procedure_type)) a.procedure_type='other';});
+    saveAppointments();
+    customKeys.forEach(k=>{delete PROC_LABELS[k];delete PROC_ICON[k];delete PROC_COLORS_DEFAULT[k];delete PROC_ID_SUFFIX[k];});
+  }
+  try{localStorage.removeItem('procColors');localStorage.removeItem('activeProcTypes');localStorage.removeItem('customProcTypes');}catch(e){}
+  activeProcTypes=PROC_ORDER_DEFAULT.slice();
+  applyProcColors(PROC_COLORS_DEFAULT);
+  populateProcColorInputs(PROC_COLORS_DEFAULT);
+  refreshProcSelects();renderList();renderCalendar();
+  pushSettingsToDB();
+  toast('รีเซ็ตประเภทการรักษาและสีเป็นค่าเริ่มต้นทั้งหมด (รวมลบประเภทที่สร้างเอง)','info');
+}
+function deleteProcType(key){
+  if(activeProcTypes.length<=1){toast('ต้องมีอย่างน้อย 1 ประเภทการรักษาในระบบ','error');return;}
+  const inUse=allApts.filter(a=>a.procedure_type===key);
+  const label=PROC_LABELS[key]||key;
+  if(inUse.length>0){
+    const fallback=activeProcTypes.find(k=>k!==key);
+    const ok=confirm(`มีนัดหมาย ${inUse.length} รายการที่ใช้ประเภท "${label}" อยู่\nหากลบ ระบบจะเปลี่ยนรายการเหล่านั้นเป็นประเภท "${PROC_LABELS[fallback]}" แทน\n\nต้องการลบประเภท "${label}" ถาวรหรือไม่?`);
+    if(!ok)return;
+    inUse.forEach(a=>{a.procedure_type=fallback;});
+    saveAppointments();
+  }else{
+    if(!confirm(`ต้องการลบประเภท "${label}" ถาวรหรือไม่?`))return;
+  }
+  activeProcTypes=activeProcTypes.filter(k=>k!==key);
+  saveActiveProcTypes();
+  saveCustomProcTypes();
+  refreshProcSelects();renderList();renderCalendar();
+  populateProcColorInputs(loadProcColors());
+  pushSettingsToDB();
+  toast(`ลบประเภท "${label}" แล้ว`,'success');
+}
+function showAddProcForm(){
+  document.getElementById('addProcRow').style.display='flex';
+  document.getElementById('btnShowAddProc').style.display='none';
+  document.getElementById('newProcLabel').focus();
+}
+function cancelAddProc(){
+  document.getElementById('addProcRow').style.display='none';
+  document.getElementById('btnShowAddProc').style.display='block';
+  document.getElementById('newProcLabel').value='';
+  document.getElementById('newProcColor').value='#8E44AD';
+}
+function confirmAddProc(){
+  const label=document.getElementById('newProcLabel').value.trim();
+  const color=document.getElementById('newProcColor').value||'#8E44AD';
+  if(!label){toast('กรุณาใส่ชื่อประเภทการรักษา','error');return;}
+  addProcType(label,color);
+  cancelAddProc();
+}
+function addProcType(label,color){
+  label=(label||'').trim();
+  if(!label)return;
+  color=color||'#8E44AD';
+  const key='custom'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  PROC_LABELS[key]=label;
+  PROC_ICON[key]='📋';
+  PROC_COLORS_DEFAULT[key]=color;
+  PROC_ID_SUFFIX[key]=key;
+  activeProcTypes.push(key);
+  saveActiveProcTypes();
+  saveCustomProcTypes();
+  const colors=loadProcColors();
+  colors[key]=color;
+  try{localStorage.setItem('procColors',JSON.stringify(colors));}catch(e){}
+  applyProcColors(colors);
+  refreshProcSelects();renderList();renderCalendar();
+  populateProcColorInputs(colors);
+  pushSettingsToDB();
+  toast(`เพิ่มประเภท "${label}" แล้ว ✅`,'success');
+}
 const SOURCE_LABELS={walkin:'Walk-in',facebook:'Facebook',instagram:'Instagram',line:'LINE OA',google:'Google',referral:'บอกต่อ/แนะนำ',other:'อื่นๆ'};
 const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -933,13 +1124,28 @@ async function pushSettingsToDB(){
   try{
     const customStatuses=activeStatuses.filter(k=>!STATUS_ORDER_DEFAULT.includes(k))
       .map(k=>({key:k,label:STATUS_PLAIN[k]||k,color:STATUS_COLORS_DEFAULT[k]||'#8E44AD'}));
-    const {error}=await sb.from('app_settings').upsert({
+    const customProcTypes=activeProcTypes.filter(k=>!PROC_ORDER_DEFAULT.includes(k))
+      .map(k=>({key:k,label:PROC_LABELS[k]||k,icon:PROC_ICON[k]||'📋',color:PROC_COLORS_DEFAULT[k]||'#8E44AD'}));
+    const payload={
       id:'global',
       active_statuses:activeStatuses,
       status_colors:loadStatusColors(),
       custom_statuses:customStatuses,
-    },{onConflict:'id'});
-    if(error)console.error('settings upsert error',error);
+      active_proc_types:activeProcTypes,
+      proc_colors:loadProcColors(),
+      custom_proc_types:customProcTypes,
+    };
+    const {error}=await sb.from('app_settings').upsert(payload,{onConflict:'id'});
+    if(error){
+      console.error('settings upsert error',error);
+      // Older app_settings schema without proc-type columns yet — retry without them
+      // so status settings still sync while the migration hasn't been run.
+      if(String(error.message||'').includes('proc')){
+        delete payload.active_proc_types;delete payload.proc_colors;delete payload.custom_proc_types;
+        const retry=await sb.from('app_settings').upsert(payload,{onConflict:'id'});
+        if(retry.error)console.error('settings upsert retry error',retry.error);
+      }
+    }
   }catch(e){console.error(e);}
 }
 async function pullFromSupabaseOnLoad(){
@@ -965,6 +1171,24 @@ async function pullFromSupabaseOnLoad(){
         try{localStorage.setItem('statusColors',JSON.stringify(settingsRow.status_colors));}catch(e){}
         applyStatusColors(settingsRow.status_colors);
       }
+      if(Array.isArray(settingsRow.custom_proc_types)){
+        settingsRow.custom_proc_types.forEach(cp=>{
+          if(cp&&cp.key&&cp.label){
+            PROC_LABELS[cp.key]=cp.label;PROC_ICON[cp.key]=cp.icon||'📋';
+            PROC_COLORS_DEFAULT[cp.key]=cp.color||'#8E44AD';PROC_ID_SUFFIX[cp.key]=cp.key;
+          }
+        });
+        try{localStorage.setItem('customProcTypes',JSON.stringify(settingsRow.custom_proc_types));}catch(e){}
+      }
+      if(Array.isArray(settingsRow.active_proc_types)){
+        activeProcTypes=settingsRow.active_proc_types.filter(k=>PROC_LABELS[k]!==undefined);
+        if(!activeProcTypes.length)activeProcTypes=PROC_ORDER_DEFAULT.slice();
+        saveActiveProcTypes();
+      }
+      if(settingsRow.proc_colors){
+        try{localStorage.setItem('procColors',JSON.stringify(settingsRow.proc_colors));}catch(e){}
+        applyProcColors(settingsRow.proc_colors);
+      }
     }else if(!settingsErr&&!settingsRow){
       pushSettingsToDB();
     }
@@ -974,8 +1198,9 @@ async function pullFromSupabaseOnLoad(){
     // appointments (don't push fake/demo data into the real shared database).
     allApts=data||[];
     saveAppointmentsLocal();
-    refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
+    refreshStatusSelects();refreshProcSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
     populateColorInputs(loadStatusColors());
+    populateProcColorInputs(loadProcColors());
     if(selectedDate)openDayPanel(selectedDate);
   }catch(e){console.error('pull from supabase failed',e);}
 }
@@ -1006,7 +1231,7 @@ function showPage(name){
   document.getElementById('side-'+name).classList.add('active');
   if(name==='list'){selectedIds.clear();renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
-  if(name==='settings'){populateColorInputs(loadStatusColors());}
+  if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());}
 }
 
 // ─── Helpers ──────────────────────────────────────────
@@ -1120,7 +1345,7 @@ function aptCard(apt){
         <span class="apt-card-name" style="font-size:15px;font-weight:700;">${apt.patient_name}</span>
       </div>
       <div class="apt-card-sub">
-        <span class="${PROC_CLASS[apt.procedure_type]||'pc-other'}" style="padding:2px 7px;border-radius:5px;font-size:11px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
+        <span class="proc-badge" style="--proc-c:var(--proc-${apt.procedure_type});padding:2px 7px;border-radius:5px;font-size:11px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
         ${apt.phone?`<span style="font-size:12px;color:var(--text-muted);">📞 ${apt.phone}</span>`:''}
         ${apt.notes?`<span style="font-size:12px;color:var(--text-muted);">💬 ${apt.notes}</span>`:''}
         ${apt.source?`<span style=\"font-size:12px;color:var(--text-muted);\">🏷️ ${SOURCE_LABELS[apt.source]||apt.source}</span>`:''}
@@ -1484,6 +1709,8 @@ function exportExcel(){
 // ─── Init ─────────────────────────────────────────────
 loadStatusColors();
 refreshStatusSelects();
+loadProcColors();
+refreshProcSelects();
 renderTodoPanel();
 showPage('list');
 pullFromSupabaseOnLoad();
