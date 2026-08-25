@@ -302,6 +302,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .btn-delete{background:#FDF2F2;color:var(--danger);border:1.5px solid #FADBD8;padding:10px 12px;border-radius:8px;font-family:var(--font);font-size:14px;cursor:pointer;}
 .btn-delete:hover{background:#FADBD8;}
 .form-input-wrap{position:relative;}
+.time-select-wrap{display:flex;align-items:center;gap:5px;}
+.time-select{width:auto;flex:1;min-width:0;text-align:center;font-variant-numeric:tabular-nums;cursor:pointer;}
+.time-colon{font-weight:800;color:var(--text-muted);}
+.time-suffix{font-size:13px;color:var(--text-muted);flex-shrink:0;}
 .pat-suggest{position:absolute;z-index:60;background:var(--surface);border:1px solid var(--border);
   border-radius:8px;box-shadow:var(--shadow);max-height:150px;overflow-y:auto;width:100%;top:100%;left:0;}
 .pat-suggest-item{padding:8px 12px;cursor:pointer;font-size:14px;}
@@ -601,8 +605,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <input class="form-input" type="date" id="fDate">
         </div>
         <div class="form-row" style="margin-bottom:0">
-          <label class="form-label">เวลา *</label>
-          <input class="form-input" type="time" id="fTime">
+          <label class="form-label">เวลา * <span style="font-weight:400;color:var(--text-muted);">(24 ชม.)</span></label>
+          <div class="time-select-wrap">
+            <select class="form-input time-select" id="fTimeHour"></select>
+            <span class="time-colon">:</span>
+            <select class="form-input time-select" id="fTimeMin"></select>
+            <span class="time-suffix">น.</span>
+          </div>
         </div>
       </div>
       <div class="form-row" style="margin-top:12px">
@@ -1697,6 +1706,34 @@ function openDayPanel(s){
 }
 function closePanel(){document.getElementById('dayPanel').classList.remove('open');selectedDate=null;renderCalendar();}
 
+// ─── Time selects (24-hour, Thai-friendly) ─────────────
+function initTimeSelects(){
+  const hourSel=document.getElementById('fTimeHour');
+  const minSel=document.getElementById('fTimeMin');
+  if(!hourSel||!minSel)return;
+  let h='';for(let i=0;i<24;i++){const v=String(i).padStart(2,'0');h+=`<option value="${v}">${v}</option>`;}
+  hourSel.innerHTML=h;
+  let m='';for(let i=0;i<60;i+=5){const v=String(i).padStart(2,'0');m+=`<option value="${v}">${v}</option>`;}
+  minSel.innerHTML=m;
+}
+function setSelectValueSafe(sel,val){
+  if(!sel)return;
+  if(![...sel.options].some(o=>o.value===val)){
+    const opt=document.createElement('option');opt.value=val;opt.textContent=val;sel.appendChild(opt);
+  }
+  sel.value=val;
+}
+function setTimeSelects(hhmm){
+  const [h,m]=(hhmm||'09:00').split(':');
+  setSelectValueSafe(document.getElementById('fTimeHour'),(h||'09').padStart(2,'0'));
+  setSelectValueSafe(document.getElementById('fTimeMin'),(m||'00').padStart(2,'0'));
+}
+function getTimeSelects(){
+  const h=document.getElementById('fTimeHour').value;
+  const m=document.getElementById('fTimeMin').value;
+  if(!h||!m)return'';
+  return h+':'+m;
+}
 // ─── Modal ────────────────────────────────────────────
 function openModal(s,apt){
   editingId=apt?apt.id:null;
@@ -1704,7 +1741,7 @@ function openModal(s,apt){
   document.getElementById('btnDelete').style.display=apt?'block':'none';
   document.getElementById('fPatient').value=apt?apt.patient_name:'';
   document.getElementById('fDate').value=apt?apt.date:(s||todayStr());
-  document.getElementById('fTime').value=apt?(apt.time||'').slice(0,5):'09:00';
+  setTimeSelects(apt?(apt.time||'').slice(0,5):'09:00');
   document.getElementById('fProc').value=apt?apt.procedure_type:'checkup';
   document.getElementById('fStatus').value=apt?apt.status:'pending';
   document.getElementById('fPhone').value=apt?(apt.phone||''):'';
@@ -1722,7 +1759,7 @@ function closeModal(){document.getElementById('modalOverlay').classList.remove('
 function saveApt(){
   const name=document.getElementById('fPatient').value.trim();
   const date=document.getElementById('fDate').value;
-  const time=document.getElementById('fTime').value;
+  const time=getTimeSelects();
   if(!name||!date||!time){toast('กรุณากรอกข้อมูลให้ครบ','error');return;}
   const p={
     id:editingId||genId(),patient_name:name,patient_id:null,date,
@@ -1821,6 +1858,7 @@ loadStatusColors();
 refreshStatusSelects();
 loadProcColors();
 refreshProcSelects();
+initTimeSelects();
 renderTodoPanel();
 showPage('list');
 pullFromSupabaseOnLoad();
