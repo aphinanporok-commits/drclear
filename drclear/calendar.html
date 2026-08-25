@@ -236,6 +236,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .apt-card-edit{background:none;border:1px solid var(--border);color:var(--text-muted);
   border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:var(--font);}
 .apt-card-edit:hover{border-color:var(--primary);color:var(--primary);}
+.list-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;padding:14px 2px 4px;}
+.page-info{font-size:12.5px;color:var(--text-muted);}
+.page-controls{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.page-nav,.page-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:6px 11px;font-size:12.5px;cursor:pointer;font-family:var(--font);
+  font-variant-numeric:tabular-nums;transition:border-color .15s,color .15s;}
+.page-nav:hover:not(:disabled),.page-btn:hover:not(.active){border-color:var(--primary);color:var(--primary);}
+.page-nav:disabled{opacity:.4;cursor:not-allowed;}
+.page-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:700;}
+.page-ellipsis{padding:0 4px;color:var(--text-muted);font-size:12.5px;}
 
 /* status pill select (in-card) */
 .pill-sel{appearance:none;-webkit-appearance:none;
@@ -425,10 +436,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="list-toolbar">
       <div class="list-toolbar-title">นัดหมายทั้งหมด</div>
       <div class="list-search-wrap">
-        <input class="list-search" id="listSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." oninput="renderList()">
+        <input class="list-search" id="listSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." oninput="listFilterChanged()">
       </div>
       <div class="status-tabs" id="statusTabs"></div>
-      <select class="sort-select" id="sortSel" onchange="renderList()">
+      <select class="sort-select" id="sortSel" onchange="listFilterChanged()">
         <option value="date-asc">วันที่ ↑ เร็วสุด</option>
         <option value="date-desc">วันที่ ↓ ล่าสุด</option>
         <option value="name-asc">ชื่อ A→Z</option>
@@ -454,6 +465,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <!-- List body -->
     <div class="list-body" id="listBody"></div>
+    <div class="list-pagination" id="listPagination"></div>
   </div>
 </div>
 
@@ -1235,6 +1247,8 @@ const patients=[
 
 let currentDate=new Date(), editingId=null, selectedDate=null;
 let activeFilter='all', selectedIds=new Set();
+let listPage=1;
+const LIST_PAGE_SIZE=10;
 function genId(){
   if(window.crypto&&crypto.randomUUID)return crypto.randomUUID();
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
@@ -1321,7 +1335,8 @@ function renderStatusTabs(){
     </button>`).join('');
 }
 
-function setFilter(f){activeFilter=f;selectedIds.clear();renderStatusTabs();renderList();updateBulkBar();}
+function setFilter(f){activeFilter=f;selectedIds.clear();listPage=1;renderStatusTabs();renderList();updateBulkBar();}
+function listFilterChanged(){listPage=1;renderList();}
 
 // ─── List render ──────────────────────────────────────
 function getFiltered(){
@@ -1342,10 +1357,18 @@ function getFiltered(){
 function renderList(){
   const arr=getFiltered();
   const body=document.getElementById('listBody');
+  const pagBox=document.getElementById('listPagination');
   if(!arr.length){
     body.innerHTML=`<div class="list-empty"><div class="list-empty-icon">🔍</div><div class="list-empty-text">ไม่พบรายการ</div><div class="list-empty-sub">ลองเปลี่ยนตัวกรองหรือคำค้นหา</div></div>`;
+    if(pagBox) pagBox.innerHTML='';
     return;
   }
+
+  const totalPages=Math.max(1,Math.ceil(arr.length/LIST_PAGE_SIZE));
+  if(listPage>totalPages) listPage=totalPages;
+  if(listPage<1) listPage=1;
+  const startIdx=(listPage-1)*LIST_PAGE_SIZE;
+  const pageArr=arr.slice(startIdx,startIdx+LIST_PAGE_SIZE);
 
   const sort=(document.getElementById('sortSel')||{value:'date-asc'}).value;
   let html='';
@@ -1353,7 +1376,7 @@ function renderList(){
   if(sort==='status'){
     // group by status
     const ORDER=['pending','confirmed','done','cancelled'];
-    const byStatus=groupBy(arr,a=>a.status);
+    const byStatus=groupBy(pageArr,a=>a.status);
     ORDER.forEach(s=>{
       if(!byStatus[s]) return;
       html+=`<div class="list-section-head">
@@ -1363,7 +1386,7 @@ function renderList(){
     });
   } else {
     // group by date
-    const byDate=groupBy(arr,a=>a.date);
+    const byDate=groupBy(pageArr,a=>a.date);
     Object.keys(byDate).sort((a,b)=>sort==='date-desc'?b.localeCompare(a):a.localeCompare(b)).forEach(d=>{
       const isToday=d===todayStr();
       const isTomorrow=d===addDays(todayStr(),1);
@@ -1378,6 +1401,40 @@ function renderList(){
   body.querySelectorAll('.row-cb').forEach(cb=>{
     if(selectedIds.has(cb.dataset.id)) cb.checked=true;
   });
+  renderListPagination(arr.length,totalPages);
+}
+function renderListPagination(totalItems,totalPages){
+  const box=document.getElementById('listPagination');
+  if(!box)return;
+  if(totalPages<=1){box.innerHTML='';return;}
+  const startItem=(listPage-1)*LIST_PAGE_SIZE+1;
+  const endItem=Math.min(listPage*LIST_PAGE_SIZE,totalItems);
+  const windowSize=1;
+  const tokens=[];
+  let lastShown=0;
+  for(let p=1;p<=totalPages;p++){
+    if(p===1||p===totalPages||Math.abs(p-listPage)<=windowSize){
+      if(p-lastShown>1) tokens.push('…');
+      tokens.push(p);
+      lastShown=p;
+    }
+  }
+  const pageBtns=tokens.map(t=>t==='…'
+    ?`<span class="page-ellipsis">…</span>`
+    :`<button class="page-btn ${t===listPage?'active':''}" onclick="goToListPage(${t})">${t}</button>`
+  ).join('');
+  box.innerHTML=`
+    <div class="page-info">แสดง ${startItem}-${endItem} จาก ${totalItems} รายการ</div>
+    <div class="page-controls">
+      <button class="page-nav" ${listPage<=1?'disabled':''} onclick="goToListPage(${listPage-1})">‹ ก่อนหน้า</button>
+      ${pageBtns}
+      <button class="page-nav" ${listPage>=totalPages?'disabled':''} onclick="goToListPage(${listPage+1})">ถัดไป ›</button>
+    </div>`;
+}
+function goToListPage(p){
+  listPage=p;
+  renderList();
+  document.getElementById('listBody').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function aptCard(apt){
