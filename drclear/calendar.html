@@ -397,6 +397,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .add-status-row input[type=text]{flex:1;}
 .add-status-row input[type=color]{width:38px;height:32px;flex-shrink:0;border:1.5px solid var(--border);
   border-radius:7px;cursor:pointer;background:none;padding:2px;}
+.links-search-wrap{margin-bottom:14px;}
+.link-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);}
+.link-row:last-of-type{border-bottom:none;}
+.link-row-icon{width:34px;height:34px;flex-shrink:0;border-radius:8px;
+  background:color-mix(in srgb,var(--primary) 12%,var(--surface));color:var(--primary);
+  display:flex;align-items:center;justify-content:center;font-size:15px;}
+.link-row-body{min-width:0;flex:1;}
+.link-row-label{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.link-row-url{font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;text-decoration:none;display:block;}
+.link-row-url:hover{color:var(--primary);text-decoration:underline;}
+.link-row-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.btn-link-open{background:none;border:1.5px solid var(--border);color:var(--text-muted);
+  border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.btn-link-open:hover{border-color:var(--primary);color:var(--primary);}
+.btn-link-edit{width:32px;height:32px;flex-shrink:0;border-radius:7px;border:1.5px solid var(--border);
+  background:transparent;color:var(--text-muted);cursor:pointer;font-size:13px;display:flex;
+  align-items:center;justify-content:center;transition:background .12s,border-color .12s;}
+.btn-link-edit:hover{border-color:var(--primary);color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,transparent);}
+.links-empty{padding:24px 4px;text-align:center;color:var(--text-muted);font-size:13px;}
+.add-link-row{flex-wrap:wrap;}
+.add-link-row input[type=text],.add-link-row input[type=url]{min-width:160px;}
 .settings-actions{display:flex;gap:10px;margin-top:6px;}
 .btn-settings-save{padding:9px 18px;border-radius:8px;background:var(--primary);color:#fff;border:none;
   font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
@@ -419,6 +441,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="navbar-nav">
     <button class="nav-btn" id="nav-list"     onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="nav-btn" id="nav-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
+    <button class="nav-btn" id="nav-links"    onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="nav-btn" id="nav-settings"  onclick="showPage('settings')">⚙️ ตั้งค่า</button>
   </div>
 </nav>
@@ -428,6 +451,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="sidebar-heading">เมนูหลัก</div>
     <button class="side-nav-item" id="side-list" onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="side-nav-item" id="side-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
+    <button class="side-nav-item" id="side-links" onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="side-nav-item" id="side-settings" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
     <div class="sidebar-heading" style="margin-top:20px;">✅ งานวันนี้</div>
     <div class="todo-panel" id="todoPanel"></div>
@@ -512,6 +536,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="cal-wd">พ</div><div class="cal-wd">พฤ</div><div class="cal-wd">ศ</div><div class="cal-wd">ส</div>
       </div>
       <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ LINKS PAGE ══════════ -->
+<div class="page" id="page-links">
+  <div class="settings-wrap">
+    <div class="settings-title">รวมลิงก์</div>
+    <div class="settings-subtitle">เก็บลิงก์ที่ใช้บ่อยไว้ที่เดียว เช่น ฟอร์ม, ไดรฟ์, กลุ่มไลน์ กดเพื่อเปิดได้ทันที</div>
+    <div class="settings-card">
+      <div class="links-search-wrap">
+        <input type="text" class="form-input" id="linksSearch" placeholder="ค้นหาลิงก์..." oninput="renderLinksPage()">
+      </div>
+      <div id="linksListContainer"></div>
+      <button class="btn-add-status" id="btnShowAddLink" onclick="showAddLinkForm()">➕ เพิ่มลิงก์ใหม่</button>
+      <div class="add-status-row add-link-row" id="addLinkRow" style="display:none;">
+        <input type="text" class="form-input" id="newLinkLabel" placeholder="ชื่อลิงก์ เช่น ฟอร์มประเมินฟัน">
+        <input type="url" class="form-input" id="newLinkUrl" placeholder="https://...">
+        <button class="btn-settings-save" onclick="confirmAddLink()">✔ บันทึก</button>
+        <button class="btn-settings-reset" onclick="cancelAddLink()">ยกเลิก</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1088,6 +1133,94 @@ function addProcType(label,color){
   pushSettingsToDB();
   toast(`เพิ่มประเภท "${label}" แล้ว ✅`,'success');
 }
+// ─── Quick links (รวมลิงก์) ────────────────────────────
+let editingLinkId=null;
+function loadQuickLinks(){
+  try{return JSON.parse(localStorage.getItem('quickLinks')||'[]');}catch(e){return [];}
+}
+function saveQuickLinksLocal(links){
+  try{localStorage.setItem('quickLinks',JSON.stringify(links));}catch(e){}
+}
+let quickLinks=loadQuickLinks();
+function normalizeUrl(u){
+  u=(u||'').trim();
+  if(!u)return'';
+  if(!/^https?:\/\//i.test(u))u='https://'+u;
+  return u;
+}
+function renderLinksPage(){
+  const box=document.getElementById('linksListContainer');
+  if(!box)return;
+  const q=(document.getElementById('linksSearch')||{value:''}).value.toLowerCase();
+  const filtered=quickLinks.filter(l=>!q||l.label.toLowerCase().includes(q)||l.url.toLowerCase().includes(q));
+  if(!filtered.length){
+    box.innerHTML=`<div class="links-empty">${quickLinks.length?'ไม่พบลิงก์ที่ค้นหา':'ยังไม่มีลิงก์ กด "เพิ่มลิงก์ใหม่" เพื่อเริ่มเก็บลิงก์ที่ใช้บ่อย'}</div>`;
+    return;
+  }
+  box.innerHTML=filtered.map(l=>`
+    <div class="link-row">
+      <div class="link-row-icon">🔗</div>
+      <div class="link-row-body">
+        <div class="link-row-label">${l.label}</div>
+        <a class="link-row-url" href="${l.url}" target="_blank" rel="noopener">${l.url}</a>
+      </div>
+      <div class="link-row-actions">
+        <a class="btn-link-open" href="${l.url}" target="_blank" rel="noopener">เปิดลิงก์ ↗</a>
+        <button class="btn-link-edit" onclick="editLink('${l.id}')" title="แก้ไข">✏️</button>
+        <button class="btn-status-delete" onclick="deleteLink('${l.id}')" title="ลบ">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+function showAddLinkForm(){
+  editingLinkId=null;
+  document.getElementById('addLinkRow').style.display='flex';
+  document.getElementById('btnShowAddLink').style.display='none';
+  document.getElementById('newLinkLabel').focus();
+}
+function cancelAddLink(){
+  editingLinkId=null;
+  document.getElementById('addLinkRow').style.display='none';
+  document.getElementById('btnShowAddLink').style.display='block';
+  document.getElementById('newLinkLabel').value='';
+  document.getElementById('newLinkUrl').value='';
+}
+function confirmAddLink(){
+  const label=document.getElementById('newLinkLabel').value.trim();
+  const url=normalizeUrl(document.getElementById('newLinkUrl').value);
+  if(!label||!url){toast('กรุณากรอกชื่อลิงก์และ URL ให้ครบ','error');return;}
+  if(editingLinkId){
+    const l=quickLinks.find(x=>x.id===editingLinkId);
+    if(l){l.label=label;l.url=url;}
+    toast('แก้ไขลิงก์แล้ว ✅','success');
+  }else{
+    quickLinks.push({id:genId(),label,url});
+    toast('เพิ่มลิงก์แล้ว ✅','success');
+  }
+  saveQuickLinksLocal(quickLinks);
+  pushSettingsToDB();
+  renderLinksPage();
+  cancelAddLink();
+}
+function editLink(id){
+  const l=quickLinks.find(x=>x.id===id);
+  if(!l)return;
+  editingLinkId=id;
+  document.getElementById('addLinkRow').style.display='flex';
+  document.getElementById('btnShowAddLink').style.display='none';
+  document.getElementById('newLinkLabel').value=l.label;
+  document.getElementById('newLinkUrl').value=l.url;
+  document.getElementById('newLinkLabel').focus();
+}
+function deleteLink(id){
+  const l=quickLinks.find(x=>x.id===id);
+  if(!l)return;
+  if(!confirm(`ต้องการลบลิงก์ "${l.label}" ถาวรหรือไม่?`))return;
+  quickLinks=quickLinks.filter(x=>x.id!==id);
+  saveQuickLinksLocal(quickLinks);
+  pushSettingsToDB();
+  renderLinksPage();
+  toast(`ลบลิงก์ "${l.label}" แล้ว`,'success');
+}
 const SOURCE_LABELS={walkin:'Walk-in',facebook:'Facebook',instagram:'Instagram',line:'LINE OA',google:'Google',referral:'บอกต่อ/แนะนำ',other:'อื่นๆ'};
 const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -1176,17 +1309,21 @@ async function pushSettingsToDB(){
       active_proc_types:activeProcTypes,
       proc_colors:loadProcColors(),
       custom_proc_types:customProcTypes,
+      quick_links:quickLinks,
     };
-    const {error}=await sb.from('app_settings').upsert(payload,{onConflict:'id'});
-    if(error){
+    // Retry loop: if the DB schema is missing a column this app version expects
+    // (e.g. a migration hasn't been run yet), strip that one column and retry —
+    // so the rest of the settings still sync instead of the whole upsert failing.
+    for(let attempt=0;attempt<5;attempt++){
+      const {error}=await sb.from('app_settings').upsert(payload,{onConflict:'id'});
+      if(!error)break;
       console.error('settings upsert error',error);
-      // Older app_settings schema without proc-type columns yet — retry without them
-      // so status settings still sync while the migration hasn't been run.
-      if(String(error.message||'').includes('proc')){
-        delete payload.active_proc_types;delete payload.proc_colors;delete payload.custom_proc_types;
-        const retry=await sb.from('app_settings').upsert(payload,{onConflict:'id'});
-        if(retry.error)console.error('settings upsert retry error',retry.error);
+      const m=String(error.message||'').match(/'([a-z_]+)' column/);
+      if(m&&m[1]&&Object.prototype.hasOwnProperty.call(payload,m[1])){
+        delete payload[m[1]];
+        continue;
       }
+      break; // unrecognized error — stop retrying
     }
   }catch(e){console.error(e);}
 }
@@ -1230,6 +1367,11 @@ async function pullFromSupabaseOnLoad(){
       if(settingsRow.proc_colors){
         try{localStorage.setItem('procColors',JSON.stringify(settingsRow.proc_colors));}catch(e){}
         applyProcColors(settingsRow.proc_colors);
+      }
+      if(Array.isArray(settingsRow.quick_links)){
+        quickLinks=settingsRow.quick_links.filter(l=>l&&l.id&&l.label&&l.url);
+        saveQuickLinksLocal(quickLinks);
+        if(document.getElementById('page-links').classList.contains('active'))renderLinksPage();
       }
     }else if(!settingsErr&&!settingsRow){
       pushSettingsToDB();
@@ -1275,6 +1417,7 @@ function showPage(name){
   document.getElementById('side-'+name).classList.add('active');
   if(name==='list'){selectedIds.clear();renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
+  if(name==='links'){cancelAddLink();renderLinksPage();}
   if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());applySettingsCardCollapse();}
 }
 function loadSettingsCollapseState(){
