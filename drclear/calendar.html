@@ -408,6 +408,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .link-row-url{font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;text-decoration:none;display:block;}
 .link-row-url:hover{color:var(--primary);text-decoration:underline;}
+.link-row-note{min-width:0;flex:1;font-size:12.5px;color:var(--text-muted);font-style:italic;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px;}
+.link-row-note:empty{visibility:hidden;}
 .link-row-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .btn-link-open{background:none;border:1.5px solid var(--border);color:var(--text-muted);
   border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:var(--font);white-space:nowrap;}
@@ -417,8 +420,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   align-items:center;justify-content:center;transition:background .12s,border-color .12s;}
 .btn-link-edit:hover{border-color:var(--primary);color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,transparent);}
 .links-empty{padding:24px 4px;text-align:center;color:var(--text-muted);font-size:13px;}
-.add-link-row{flex-wrap:wrap;}
-.add-link-row input[type=text],.add-link-row input[type=url]{min-width:160px;}
+.add-link-form{display:flex;flex-direction:column;gap:8px;padding:12px 0 2px;
+  border-top:1px dashed var(--border);margin-top:8px;}
+.add-link-form-row{display:flex;gap:8px;flex-wrap:wrap;}
+.add-link-form-row input{flex:1;min-width:160px;}
+.add-link-form-actions{display:flex;gap:8px;}
 .settings-actions{display:flex;gap:10px;margin-top:6px;}
 .btn-settings-save{padding:9px 18px;border-radius:8px;background:var(--primary);color:#fff;border:none;
   font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
@@ -551,11 +557,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
       <div id="linksListContainer"></div>
       <button class="btn-add-status" id="btnShowAddLink" onclick="showAddLinkForm()">➕ เพิ่มลิงก์ใหม่</button>
-      <div class="add-status-row add-link-row" id="addLinkRow" style="display:none;">
-        <input type="text" class="form-input" id="newLinkLabel" placeholder="ชื่อลิงก์ เช่น ฟอร์มประเมินฟัน">
-        <input type="url" class="form-input" id="newLinkUrl" placeholder="https://...">
-        <button class="btn-settings-save" onclick="confirmAddLink()">✔ บันทึก</button>
-        <button class="btn-settings-reset" onclick="cancelAddLink()">ยกเลิก</button>
+      <div class="add-link-form" id="addLinkRow" style="display:none;">
+        <div class="add-link-form-row">
+          <input type="text" class="form-input" id="newLinkLabel" placeholder="ชื่อลิงก์ เช่น ฟอร์มประเมินฟัน">
+          <input type="url" class="form-input" id="newLinkUrl" placeholder="https://...">
+        </div>
+        <input type="text" class="form-input" id="newLinkNote" placeholder="โน้ต (ไม่บังคับ) เช่น รายละเอียดหรือข้อควรระวัง">
+        <div class="add-link-form-actions">
+          <button class="btn-settings-save" onclick="confirmAddLink()">✔ บันทึก</button>
+          <button class="btn-settings-reset" onclick="cancelAddLink()">ยกเลิก</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1152,7 +1163,7 @@ function renderLinksPage(){
   const box=document.getElementById('linksListContainer');
   if(!box)return;
   const q=(document.getElementById('linksSearch')||{value:''}).value.toLowerCase();
-  const filtered=quickLinks.filter(l=>!q||l.label.toLowerCase().includes(q)||l.url.toLowerCase().includes(q));
+  const filtered=quickLinks.filter(l=>!q||l.label.toLowerCase().includes(q)||l.url.toLowerCase().includes(q)||(l.note||'').toLowerCase().includes(q));
   if(!filtered.length){
     box.innerHTML=`<div class="links-empty">${quickLinks.length?'ไม่พบลิงก์ที่ค้นหา':'ยังไม่มีลิงก์ กด "เพิ่มลิงก์ใหม่" เพื่อเริ่มเก็บลิงก์ที่ใช้บ่อย'}</div>`;
     return;
@@ -1164,6 +1175,7 @@ function renderLinksPage(){
         <div class="link-row-label">${l.label}</div>
         <a class="link-row-url" href="${l.url}" target="_blank" rel="noopener">${l.url}</a>
       </div>
+      <div class="link-row-note" title="${l.note||''}">${l.note||''}</div>
       <div class="link-row-actions">
         <a class="btn-link-open" href="${l.url}" target="_blank" rel="noopener">เปิดลิงก์ ↗</a>
         <button class="btn-link-edit" onclick="editLink('${l.id}')" title="แก้ไข">✏️</button>
@@ -1183,17 +1195,19 @@ function cancelAddLink(){
   document.getElementById('btnShowAddLink').style.display='block';
   document.getElementById('newLinkLabel').value='';
   document.getElementById('newLinkUrl').value='';
+  document.getElementById('newLinkNote').value='';
 }
 function confirmAddLink(){
   const label=document.getElementById('newLinkLabel').value.trim();
   const url=normalizeUrl(document.getElementById('newLinkUrl').value);
+  const note=document.getElementById('newLinkNote').value.trim();
   if(!label||!url){toast('กรุณากรอกชื่อลิงก์และ URL ให้ครบ','error');return;}
   if(editingLinkId){
     const l=quickLinks.find(x=>x.id===editingLinkId);
-    if(l){l.label=label;l.url=url;}
+    if(l){l.label=label;l.url=url;l.note=note;}
     toast('แก้ไขลิงก์แล้ว ✅','success');
   }else{
-    quickLinks.push({id:genId(),label,url});
+    quickLinks.push({id:genId(),label,url,note});
     toast('เพิ่มลิงก์แล้ว ✅','success');
   }
   saveQuickLinksLocal(quickLinks);
@@ -1209,6 +1223,7 @@ function editLink(id){
   document.getElementById('btnShowAddLink').style.display='none';
   document.getElementById('newLinkLabel').value=l.label;
   document.getElementById('newLinkUrl').value=l.url;
+  document.getElementById('newLinkNote').value=l.note||'';
   document.getElementById('newLinkLabel').focus();
 }
 function deleteLink(id){
