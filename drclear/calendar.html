@@ -2,6 +2,7 @@
 <title>ปฏิทินนัดหมาย</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --primary:#1B6FA8; --primary-dark:#154E78; --danger:#E74C3C;
@@ -773,6 +774,7 @@ function saveStatusColors(){
   });
   try{localStorage.setItem('statusColors',JSON.stringify(colors));}catch(e){}
   applyStatusColors(colors);
+  pushSettingsToDB();
   toast('บันทึกสีสถานะเรียบร้อย ✅','success');
 }
 function resetStatusColors(){
@@ -787,6 +789,7 @@ function resetStatusColors(){
   applyStatusColors(STATUS_COLORS_DEFAULT);
   populateColorInputs(STATUS_COLORS_DEFAULT);
   refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
+  pushSettingsToDB();
   toast('รีเซ็ตสถานะและสีเป็นค่าเริ่มต้นทั้งหมด (รวมลบสถานะที่สร้างเอง)','info');
 }
 function deleteStatus(key){
@@ -807,6 +810,7 @@ function deleteStatus(key){
   saveCustomStatuses();
   refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
   populateColorInputs(loadStatusColors());
+  pushSettingsToDB();
   toast(`ลบสถานะ "${label}" แล้ว`,'success');
 }
 function showAddStatusForm(){
@@ -845,6 +849,7 @@ function addStatus(label,color){
   applyStatusColors(colors);
   refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
   populateColorInputs(colors);
+  pushSettingsToDB();
   toast(`เพิ่มสถานะ "${label}" แล้ว ✅`,'success');
 }
 document.addEventListener('input',e=>{
@@ -886,10 +891,97 @@ function loadAppointments(){
   }catch(e){}
   return DEMO_APTS.slice();
 }
-function saveAppointments(){
+function saveAppointmentsLocal(){
   try{localStorage.setItem('allApts',JSON.stringify(allApts));}catch(e){}
 }
 let allApts=loadAppointments();
+
+// ─── Supabase cloud sync (optional — falls back to localStorage only) ───
+const SUPABASE_URL='https://osqtunzfynskpwdymqiv.supabase.co';
+const SUPABASE_KEY='sb_publishable_lH_q9VqXzGGHD9WMhs_1rQ_4w6lxZgm';
+let sb=null;
+try{
+  if(window.supabase && window.supabase.createClient){
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  }
+}catch(e){console.error('Supabase init failed',e);}
+
+let aptUpsertTimer=null;
+function syncAppointmentsToDB(){
+  if(!sb||!allApts.length)return;
+  clearTimeout(aptUpsertTimer);
+  aptUpsertTimer=setTimeout(async()=>{
+    try{
+      const {error}=await sb.from('appointments').upsert(allApts,{onConflict:'id'});
+      if(error){console.error('appointments upsert error',error);toast('ซิงก์ข้อมูลนัดหมายไปฐานข้อมูลไม่สำเร็จ (บันทึกในเครื่องไว้แล้ว)','error');}
+    }catch(e){console.error(e);}
+  },400);
+}
+async function deleteAppointmentFromDB(id){
+  if(!sb)return;
+  try{
+    const {error}=await sb.from('appointments').delete().eq('id',id);
+    if(error){console.error('appointments delete error',error);toast('ลบข้อมูลในฐานข้อมูลไม่สำเร็จ','error');}
+  }catch(e){console.error(e);}
+}
+function saveAppointments(){
+  saveAppointmentsLocal();
+  syncAppointmentsToDB();
+}
+async function pushSettingsToDB(){
+  if(!sb)return;
+  try{
+    const customStatuses=activeStatuses.filter(k=>!STATUS_ORDER_DEFAULT.includes(k))
+      .map(k=>({key:k,label:STATUS_PLAIN[k]||k,color:STATUS_COLORS_DEFAULT[k]||'#8E44AD'}));
+    const {error}=await sb.from('app_settings').upsert({
+      id:'global',
+      active_statuses:activeStatuses,
+      status_colors:loadStatusColors(),
+      custom_statuses:customStatuses,
+    },{onConflict:'id'});
+    if(error)console.error('settings upsert error',error);
+  }catch(e){console.error(e);}
+}
+async function pullFromSupabaseOnLoad(){
+  if(!sb)return;
+  try{
+    const {data:settingsRow,error:settingsErr}=await sb.from('app_settings').select('*').eq('id','global').maybeSingle();
+    if(!settingsErr&&settingsRow){
+      if(Array.isArray(settingsRow.custom_statuses)){
+        settingsRow.custom_statuses.forEach(cs=>{
+          if(cs&&cs.key&&cs.label){
+            STATUS_LBL[cs.key]=cs.label;STATUS_PLAIN[cs.key]=cs.label;
+            STATUS_COLORS_DEFAULT[cs.key]=cs.color||'#8E44AD';STATUS_ID_SUFFIX[cs.key]=cs.key;
+          }
+        });
+        try{localStorage.setItem('customStatuses',JSON.stringify(settingsRow.custom_statuses));}catch(e){}
+      }
+      if(Array.isArray(settingsRow.active_statuses)){
+        activeStatuses=settingsRow.active_statuses.filter(k=>STATUS_PLAIN[k]!==undefined);
+        if(!activeStatuses.length)activeStatuses=STATUS_ORDER_DEFAULT.slice();
+        saveActiveStatuses();
+      }
+      if(settingsRow.status_colors){
+        try{localStorage.setItem('statusColors',JSON.stringify(settingsRow.status_colors));}catch(e){}
+        applyStatusColors(settingsRow.status_colors);
+      }
+    }else if(!settingsErr&&!settingsRow){
+      pushSettingsToDB();
+    }
+    const {data,error}=await sb.from('appointments').select('*');
+    if(error){console.error('appointments fetch error',error);return;}
+    if(data&&data.length){
+      allApts=data;
+      saveAppointmentsLocal();
+    }else if(allApts.length){
+      const {error:seedErr}=await sb.from('appointments').insert(allApts);
+      if(seedErr)console.error('seed insert error',seedErr);
+    }
+    refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
+    populateColorInputs(loadStatusColors());
+    if(selectedDate)openDayPanel(selectedDate);
+  }catch(e){console.error('pull from supabase failed',e);}
+}
 const patients=[
   {id:'p1',name:'สมชาย เจริญสุข',phone:'081-234-5678'},
   {id:'p2',name:'วรรณา มีสุข',   phone:'089-123-4567'},
@@ -1318,8 +1410,10 @@ function saveApt(){
 }
 function deleteApt(){
   if(!editingId)return;
-  allApts=allApts.filter(a=>a.id!==editingId);
-  saveAppointments();
+  const deletedId=editingId;
+  allApts=allApts.filter(a=>a.id!==deletedId);
+  saveAppointmentsLocal();
+  deleteAppointmentFromDB(deletedId);
   toast('ลบนัดหมายแล้ว','info');
   closeModal();renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate) openDayPanel(selectedDate);
@@ -1390,4 +1484,5 @@ loadStatusColors();
 refreshStatusSelects();
 renderTodoPanel();
 showPage('list');
+pullFromSupabaseOnLoad();
 </script>
