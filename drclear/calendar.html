@@ -98,6 +98,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .apt-chip.dragging{opacity:.35;cursor:grabbing;}
 .cal-cell.drag-over{background:color-mix(in srgb,var(--primary) 10%,var(--surface));outline:2px dashed var(--primary);outline-offset:-2px;}
 .apt-chip-time{font-size:10.5px;opacity:.75;flex-shrink:0;}
+.apt-chip-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .apt-more{font-size:11.5px;font-weight:700;color:var(--text-muted);padding:2px 2px;cursor:pointer;}
 .apt-more:hover{color:var(--primary);}
 
@@ -1778,7 +1779,7 @@ function renderCalendar(){
       chip.style.color=contrastText(chipColor);
       chip.title=(STATUS_PLAIN[apt.status]||apt.status)+' · ลากเพื่อย้ายวัน';
       chip.draggable=true;
-      chip.innerHTML=`<span class="apt-chip-time">${apt.time?apt.time.slice(0,5):''}</span>${apt.patient_name}`;
+      chip.innerHTML=`<span class="apt-chip-time">${apt.time?apt.time.slice(0,5):''}</span><span class="apt-chip-name">${apt.patient_name}</span>`;
       chip.onclick=e=>{e.stopPropagation();openModal(s,apt);};
       chip.ondragstart=e=>{
         e.stopPropagation();
