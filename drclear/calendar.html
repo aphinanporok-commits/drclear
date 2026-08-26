@@ -220,9 +220,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   padding:1px 8px;font-size:11px;}
 .apt-card{
   display:grid;grid-template-columns:48px 1fr auto auto;
-  align-items:center;gap:12px;
+  align-items:center;gap:10px;
   background:var(--surface);border:1px solid var(--cal-border);
-  border-radius:12px;padding:12px 14px;margin-bottom:8px;
+  border-radius:9px;padding:8px 12px;margin-bottom:5px;
   transition:border-color .15s,box-shadow .15s;
 }
 .apt-card:hover{border-color:var(--primary);box-shadow:0 2px 12px rgba(27,111,168,.1);}
@@ -231,12 +231,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .apt-card-time{font-size:15px;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums;line-height:1.1;}
 .apt-card-date{font-size:10px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums;}
 .apt-card-info{min-width:0;}
-.apt-card-name{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.apt-card-sub{font-size:12px;color:var(--text-muted);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.apt-card-price{font-size:12px;font-weight:700;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums;}
-.apt-card-actions{display:flex;align-items:center;gap:8px;}
+.apt-card-name{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.apt-card-sub{font-size:11.5px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.apt-card-note{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.apt-card-note:hover{color:var(--primary);}
+.apt-card-note.expanded{max-width:none;white-space:normal;background:color-mix(in srgb,var(--primary) 6%,transparent);
+  border-radius:6px;padding:3px 6px;margin:-3px -6px;}
+.apt-card-price{font-size:11.5px;font-weight:700;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.apt-card-actions{display:flex;align-items:center;gap:6px;}
 .apt-card-edit{background:none;border:1px solid var(--border);color:var(--text-muted);
-  border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:var(--font);}
+  border-radius:6px;padding:4px 9px;font-size:11.5px;cursor:pointer;font-family:var(--font);}
 .apt-card-edit:hover{border-color:var(--primary);color:var(--primary);}
 .list-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;
   flex-wrap:wrap;padding:14px 2px 4px;}
@@ -252,7 +256,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 /* status pill select (in-card) */
 .pill-sel{appearance:none;-webkit-appearance:none;
-  padding:5px 24px 5px 10px;border-radius:20px;font-family:var(--font);font-size:12px;font-weight:700;
+  padding:4px 22px 4px 9px;border-radius:20px;font-family:var(--font);font-size:11.5px;font-weight:700;
   border:2px solid transparent;cursor:pointer;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 8px center;transition:all .15s;}
@@ -1620,21 +1624,21 @@ function aptCard(apt){
     <div class="apt-card-check">
       <input type="checkbox" class="cb row-cb" data-id="${apt.id}" ${checked} onchange="toggleRow('${apt.id}',this.checked)">
     </div>
-    <div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-        <span style="font-size:15px;font-weight:700;">${apt.time?apt.time.slice(0,5):'--:--'}</span>
-        <span class="apt-card-name" style="font-size:15px;font-weight:700;">${apt.patient_name}</span>
+    <div style="min-width:0;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:13.5px;font-weight:700;">${apt.time?apt.time.slice(0,5):'--:--'}</span>
+        <span class="apt-card-name" style="max-width:220px;">${apt.patient_name}</span>
       </div>
       <div class="apt-card-sub">
-        <span class="proc-badge" style="padding:2px 7px;border-radius:5px;font-size:11px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
-        ${apt.phone?`<span style="font-size:12px;color:var(--text-muted);">📞 ${apt.phone}</span>`:''}
-        ${apt.notes?`<span style="font-size:12px;color:var(--text-muted);">💬 ${apt.notes}</span>`:''}
-        ${apt.source?`<span style=\"font-size:12px;color:var(--text-muted);\">🏷️ ${SOURCE_LABELS[apt.source]||apt.source}</span>`:''}
-        ${apt.followup_date?`<span style="font-size:12px;color:#8E44AD;font-weight:700;">📞 ติดต่อ ${fmtDate(apt.followup_date)}</span>`:''}
+        <span class="proc-badge" style="padding:1px 6px;border-radius:5px;font-size:10.5px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
+        ${apt.phone?`<span>📞 ${apt.phone}</span>`:''}
+        ${apt.notes?`<span class="apt-card-note" onclick="event.stopPropagation();toggleNoteExpand(this)" title="กดเพื่อดู/ย่อโน้ตเต็ม">💬 ${apt.notes}</span>`:''}
+        ${apt.source?`<span>🏷️ ${SOURCE_LABELS[apt.source]||apt.source}</span>`:''}
+        ${apt.followup_date?`<span style="color:#8E44AD;font-weight:700;">📞 ติดต่อ ${fmtDate(apt.followup_date)}</span>`:''}
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      ${apt.price?`<span style="font-size:13px;font-weight:700;color:var(--text-muted);white-space:nowrap;">฿${Number(apt.price).toLocaleString()}</span>`:''}
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      ${apt.price?`<span class="apt-card-price">฿${Number(apt.price).toLocaleString()}</span>`:''}
       <div style="position:relative;">
         <select class="pill-sel" style="--pill-c:var(--status-${apt.status})" data-id="${apt.id}" onchange="changeStatus('${apt.id}',this)">
           ${statusOptionsHTML(apt.status,null)}
