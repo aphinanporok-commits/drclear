@@ -577,8 +577,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="settings-card">
       <div class="settings-card-head" onclick="toggleSettingsCard('status')">
         <div>
-          <div class="settings-card-title">สีสถานะนัดหมาย</div>
-          <div class="settings-card-desc">เลือกสีประจำแต่ละสถานะ ระบบจะนำไปใช้กับจุดสถานะ ป้ายสถานะ และตัวเลือกสถานะทั้งหมด</div>
+          <div class="settings-card-title">ถึงขั้นตอนไหน</div>
+          <div class="settings-card-desc">เลือกสีประจำแต่ละขั้นตอน ระบบจะนำไปใช้กับจุดสถานะ ป้ายสถานะ และตัวเลือกสถานะทั้งหมด</div>
         </div>
         <button class="settings-card-toggle" id="toggleStatus" title="ย่อ/ขยาย">▾</button>
       </div>
@@ -600,7 +600,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="settings-card">
       <div class="settings-card-head" onclick="toggleSettingsCard('proc')">
         <div>
-          <div class="settings-card-title">ประเภทการรักษา</div>
+          <div class="settings-card-title">สถานะ</div>
           <div class="settings-card-desc">เพิ่ม/ลบ/กำหนดสีประเภทการรักษา ระบบจะนำไปใช้กับป้ายประเภทและตัวเลือกในฟอร์มนัดหมายทั้งหมด</div>
         </div>
         <button class="settings-card-toggle" id="toggleProc" title="ย่อ/ขยาย">▾</button>
@@ -1048,7 +1048,29 @@ function saveCustomProcTypes(){
     .map(k=>({key:k,label:PROC_LABELS[k]||k,icon:PROC_ICON[k]||'📋',color:PROC_COLORS_DEFAULT[k]||'#8E44AD'}));
   try{localStorage.setItem('customProcTypes',JSON.stringify(custom));}catch(e){}
 }
+// Renamed labels for the built-in default procedure types are stored separately
+// since those keys aren't part of customProcTypes.
+function loadProcLabelOverrides(){
+  try{
+    const saved=localStorage.getItem('procLabelOverrides');
+    if(saved){
+      const obj=JSON.parse(saved);
+      Object.keys(obj).forEach(k=>{
+        if(obj[k]&&PROC_ORDER_DEFAULT.includes(k)){PROC_LABELS[k]=obj[k];}
+      });
+      return obj;
+    }
+  }catch(e){}
+  return {};
+}
+function saveProcLabelOverride(key,label){
+  let overrides={};
+  try{overrides=JSON.parse(localStorage.getItem('procLabelOverrides')||'{}');}catch(e){}
+  overrides[key]=label;
+  try{localStorage.setItem('procLabelOverrides',JSON.stringify(overrides));}catch(e){}
+}
 loadCustomProcTypes();
+loadProcLabelOverrides();
 function procColorValue(key){
   const v=getComputedStyle(document.documentElement).getPropertyValue('--proc-'+key).trim();
   return v||PROC_COLORS_DEFAULT[key]||'#888888';
@@ -1079,6 +1101,7 @@ function saveActiveProcTypes(){
   try{localStorage.setItem('activeProcTypes',JSON.stringify(activeProcTypes));}catch(e){}
 }
 let activeProcTypes=loadActiveProcTypes();
+let editingProcKey=null;
 function procOptionsHTML(selectedKey){
   return activeProcTypes.map(k=>`<option value="${k}" ${k===selectedKey?'selected':''}>${PROC_ICON[k]||'📋'} ${PROC_LABELS[k]}</option>`).join('');
 }
@@ -1091,10 +1114,21 @@ function renderProcSettingsRows(){
   if(!box)return;
   box.innerHTML=activeProcTypes.map(k=>{
     const suf=PROC_ID_SUFFIX[k];
+    if(k===editingProcKey){
+      return `<div class="color-row proc-color-row" data-proc="${k}">
+        <input type="text" class="form-input status-label-edit" id="editProcLabelInput" value="${PROC_LABELS[k]}"
+          onkeydown="if(event.key==='Enter')saveProcLabel('${k}');if(event.key==='Escape')cancelEditProcLabel();">
+        <span class="color-row-preview" id="procPreview${suf}">ตัวอย่าง</span>
+        <input type="color" id="procColor${suf}" data-proc="${k}">
+        <button class="btn-status-save" title="บันทึก" onclick="saveProcLabel('${k}')">✔</button>
+        <button class="btn-status-cancel" title="ยกเลิก" onclick="cancelEditProcLabel()">✕</button>
+      </div>`;
+    }
     return `<div class="color-row proc-color-row" data-proc="${k}">
       <span class="color-row-label">${PROC_ICON[k]||'📋'} ${PROC_LABELS[k]}</span>
       <span class="color-row-preview" id="procPreview${suf}">ตัวอย่าง</span>
       <input type="color" id="procColor${suf}" data-proc="${k}">
+      <button class="btn-status-edit" title="แก้ไขชื่อ" onclick="editProcLabel('${k}')">✏️</button>
       <button class="btn-status-delete" title="ลบประเภทนี้" onclick="deleteProcType('${k}')">🗑</button>
     </div>`;
   }).join('') || `<div class="settings-card-desc">ไม่มีประเภทการรักษาเหลืออยู่ กด "ค่าเริ่มต้น" เพื่อคืนทั้งหมด</div>`;
@@ -1163,6 +1197,35 @@ function deleteProcType(key){
   populateProcColorInputs(loadProcColors());
   pushSettingsToDB();
   toast(`ลบประเภท "${label}" แล้ว`,'success');
+}
+function editProcLabel(key){
+  editingProcKey=key;
+  renderProcSettingsRows();
+  populateProcColorInputs(loadProcColors());
+  const inp=document.getElementById('editProcLabelInput');
+  if(inp){inp.focus();inp.select();}
+}
+function cancelEditProcLabel(){
+  editingProcKey=null;
+  renderProcSettingsRows();
+  populateProcColorInputs(loadProcColors());
+}
+function saveProcLabel(key){
+  const inp=document.getElementById('editProcLabelInput');
+  const val=(inp?inp.value:'').trim();
+  if(!val){toast('กรุณาใส่ชื่อ','error');return;}
+  PROC_LABELS[key]=val;
+  if(PROC_ORDER_DEFAULT.includes(key)){
+    saveProcLabelOverride(key,val);
+  }else{
+    saveCustomProcTypes();
+  }
+  editingProcKey=null;
+  refreshProcSelects();renderList();renderCalendar();
+  renderProcSettingsRows();
+  populateProcColorInputs(loadProcColors());
+  pushSettingsToDB();
+  toast(`เปลี่ยนชื่อเป็น "${val}" แล้ว ✅`,'success');
 }
 function showAddProcForm(){
   document.getElementById('addProcRow').style.display='flex';
@@ -1389,6 +1452,7 @@ async function pushSettingsToDB(){
       custom_proc_types:customProcTypes,
       quick_links:quickLinks,
       status_label_overrides:loadStatusLabelOverrides(),
+      proc_label_overrides:loadProcLabelOverrides(),
     };
     // Retry loop: if the DB schema is missing a column this app version expects
     // (e.g. a migration hasn't been run yet), strip that one column and retry —
@@ -1434,6 +1498,13 @@ async function pullFromSupabaseOnLoad(){
         Object.keys(settingsRow.status_label_overrides).forEach(k=>{
           const v=settingsRow.status_label_overrides[k];
           if(v&&STATUS_ORDER_DEFAULT.includes(k)){STATUS_LBL[k]=v;STATUS_PLAIN[k]=v;}
+        });
+      }
+      if(settingsRow.proc_label_overrides&&typeof settingsRow.proc_label_overrides==='object'){
+        try{localStorage.setItem('procLabelOverrides',JSON.stringify(settingsRow.proc_label_overrides));}catch(e){}
+        Object.keys(settingsRow.proc_label_overrides).forEach(k=>{
+          const v=settingsRow.proc_label_overrides[k];
+          if(v&&PROC_ORDER_DEFAULT.includes(k)){PROC_LABELS[k]=v;}
         });
       }
       if(Array.isArray(settingsRow.custom_proc_types)){
