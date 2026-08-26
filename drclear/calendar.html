@@ -195,19 +195,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .btn-export-excel:hover{background:#155A34;}
 .btn-export-excel:disabled{opacity:.6;cursor:not-allowed;}
 
-/* bulk bar */
-.bulk-bar{display:none;background:color-mix(in srgb,var(--primary) 8%,var(--surface));
-  border:1.5px solid var(--primary);border-radius:10px;padding:9px 16px;
-  align-items:center;gap:10px;margin:10px 20px 0;}
-.bulk-bar.visible{display:flex;}
-.bulk-bar-text{font-size:13px;font-weight:700;color:var(--primary);flex:1;}
-.bulk-sel{padding:6px 10px;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;
-  border:1.5px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;}
-.bulk-apply{padding:7px 14px;border-radius:8px;background:var(--primary);color:#fff;
-  border:none;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
-.bulk-apply:hover{background:var(--primary-dark);}
-.bulk-clear{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:2px;}
-
 /* appointment cards */
 .list-body{flex:1;overflow-y:auto;padding:16px 20px;}
 .list-section-head{
@@ -219,7 +206,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .list-section-badge{background:var(--cal-border);color:var(--text-muted);border-radius:10px;
   padding:1px 8px;font-size:11px;}
 .apt-card{
-  display:grid;grid-template-columns:48px 1fr auto auto;
+  display:grid;grid-template-columns:1fr auto auto;
   align-items:center;gap:10px;
   background:var(--surface);border:1px solid var(--cal-border);
   border-radius:9px;padding:8px 12px;margin-bottom:5px;
@@ -493,19 +480,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <button class="btn-export-excel" id="btnExportExcel" onclick="exportExcel()">📤 Export Excel</button>
         <button class="btn-new-apt" onclick="openModal(null)">+ เพิ่มนัดหมาย</button>
       </div>
-    </div>
-    <!-- Bulk bar -->
-    <div class="bulk-bar" id="bulkBar">
-      <div class="bulk-bar-text" id="bulkText">เลือก 0</div>
-      <select class="bulk-sel" id="bulkStatus">
-        <option value="">เปลี่ยนสถานะเป็น...</option>
-        <option value="pending">⏳ รอยืนยัน</option>
-        <option value="confirmed">✅ ยืนยันแล้ว</option>
-        <option value="done">🏁 เสร็จแล้ว</option>
-        <option value="cancelled">❌ ยกเลิก</option>
-      </select>
-      <button class="bulk-apply" onclick="applyBulk()">ใช้งาน</button>
-      <button class="bulk-clear" onclick="clearBulk()" title="ยกเลิกการเลือก">✕</button>
     </div>
     <!-- List body -->
     <div class="list-body" id="listBody"></div>
@@ -852,8 +826,6 @@ function statusOptionsHTML(selectedKey,blankLabel){
 function refreshStatusSelects(){
   const fStatus=document.getElementById('fStatus');
   if(fStatus){const cur=fStatus.value;fStatus.innerHTML=statusOptionsHTML(null,null);if(activeStatuses.includes(cur))fStatus.value=cur;}
-  const bulkStatus=document.getElementById('bulkStatus');
-  if(bulkStatus){bulkStatus.innerHTML=statusOptionsHTML(null,'เปลี่ยนสถานะเป็น...');}
 }
 function renderStatusSettingsRows(){
   const box=document.getElementById('colorRowsContainer');
@@ -1426,7 +1398,7 @@ const patients=[
 ];
 
 let currentDate=new Date(), editingId=null, selectedDate=null;
-let activeFilter='all', selectedIds=new Set();
+let activeFilter='all';
 let listPage=1;
 const LIST_PAGE_SIZE=10;
 function genId(){
@@ -1444,7 +1416,7 @@ function showPage(name){
   document.getElementById('page-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
   document.getElementById('side-'+name).classList.add('active');
-  if(name==='list'){selectedIds.clear();renderStatusTabs();renderList();}
+  if(name==='list'){renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
   if(name==='links'){cancelAddLink();renderLinksPage();}
   if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());applySettingsCardCollapse();}
@@ -1516,7 +1488,7 @@ function renderStatusTabs(){
     </button>`).join('');
 }
 
-function setFilter(f){activeFilter=f;selectedIds.clear();listPage=1;renderStatusTabs();renderList();updateBulkBar();}
+function setFilter(f){activeFilter=f;listPage=1;renderStatusTabs();renderList();}
 function listFilterChanged(){listPage=1;renderList();}
 
 // ─── List render ──────────────────────────────────────
@@ -1578,10 +1550,6 @@ function renderList(){
   }
 
   body.innerHTML=html;
-  // restore checkbox states
-  body.querySelectorAll('.row-cb').forEach(cb=>{
-    if(selectedIds.has(cb.dataset.id)) cb.checked=true;
-  });
   renderListPagination(arr.length,totalPages);
 }
 function renderListPagination(totalItems,totalPages){
@@ -1619,11 +1587,7 @@ function goToListPage(p){
 }
 
 function aptCard(apt){
-  const checked=selectedIds.has(apt.id)?'checked':'';
   return `<div class="apt-card" id="card-${apt.id}">
-    <div class="apt-card-check">
-      <input type="checkbox" class="cb row-cb" data-id="${apt.id}" ${checked} onchange="toggleRow('${apt.id}',this.checked)">
-    </div>
     <div style="min-width:0;">
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:13.5px;font-weight:700;">${apt.time?apt.time.slice(0,5):'--:--'}</span>
@@ -1657,27 +1621,6 @@ function changeStatus(id,sel){
   sel.style.setProperty('--pill-c','var(--status-'+sel.value+')');
   toast(`${apt.patient_name} → ${STATUS_PLAIN[sel.value]} ✅`,'success');
   renderStatusTabs();renderList();updateStats();renderTodoPanel();
-}
-
-// ─── Row selection ────────────────────────────────────
-function toggleRow(id,checked){
-  if(checked) selectedIds.add(id); else selectedIds.delete(id);
-  updateBulkBar();
-}
-function updateBulkBar(){
-  const bar=document.getElementById('bulkBar');
-  if(selectedIds.size>0){bar.classList.add('visible');document.getElementById('bulkText').textContent=`เลือก ${selectedIds.size} รายการ`;}
-  else{bar.classList.remove('visible');document.getElementById('bulkStatus').value='';}
-}
-function clearBulk(){selectedIds.clear();updateBulkBar();renderList();}
-function applyBulk(){
-  const s=document.getElementById('bulkStatus').value;
-  if(!s){toast('กรุณาเลือกสถานะ','error');return;}
-  let n=0;
-  allApts.forEach(a=>{if(selectedIds.has(a.id)){a.status=s;n++;}});
-  saveAppointments();
-  toast(`อัปเดต ${n} รายการ → ${STATUS_PLAIN[s]} ✅`,'success');
-  selectedIds.clear();updateBulkBar();renderStatusTabs();renderList();updateStats();renderTodoPanel();
 }
 
 // ─── Calendar ─────────────────────────────────────────
