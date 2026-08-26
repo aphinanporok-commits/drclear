@@ -382,6 +382,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   background:transparent;color:#E74C3C;cursor:pointer;font-size:14px;display:flex;align-items:center;
   justify-content:center;transition:background .12s,border-color .12s;}
 .btn-status-delete:hover{background:color-mix(in srgb,#E74C3C 12%,transparent);border-color:#E74C3C;}
+.btn-status-edit{width:32px;height:32px;flex-shrink:0;border-radius:7px;border:1.5px solid var(--border);
+  background:transparent;color:var(--text-muted);cursor:pointer;font-size:13px;display:flex;align-items:center;
+  justify-content:center;transition:background .12s,border-color .12s,color .12s;}
+.btn-status-edit:hover{background:color-mix(in srgb,var(--primary) 10%,transparent);border-color:var(--primary);color:var(--primary);}
+.btn-status-save{width:32px;height:32px;flex-shrink:0;border-radius:7px;border:1.5px solid #27AE60;
+  background:color-mix(in srgb,#27AE60 12%,transparent);color:#27AE60;cursor:pointer;font-size:14px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;}
+.btn-status-save:hover{background:color-mix(in srgb,#27AE60 22%,transparent);}
+.btn-status-cancel{width:32px;height:32px;flex-shrink:0;border-radius:7px;border:1.5px solid var(--border);
+  background:transparent;color:var(--text-muted);cursor:pointer;font-size:14px;display:flex;align-items:center;
+  justify-content:center;transition:background .12s,border-color .12s;}
+.btn-status-cancel:hover{background:color-mix(in srgb,#E74C3C 12%,transparent);border-color:#E74C3C;color:#E74C3C;}
+.status-label-edit{flex:1;padding:6px 9px;font-size:13px;}
 .btn-add-status{margin-top:10px;padding:9px 14px;border-radius:8px;background:transparent;
   border:1.5px dashed var(--primary);color:var(--primary);font-family:var(--font);font-size:13px;
   font-weight:700;cursor:pointer;width:100%;transition:background .12s;}
@@ -774,7 +787,29 @@ function saveCustomStatuses(){
     .map(k=>({key:k,label:STATUS_PLAIN[k]||k,color:STATUS_COLORS_DEFAULT[k]||'#8E44AD'}));
   try{localStorage.setItem('customStatuses',JSON.stringify(custom));}catch(e){}
 }
+// Renamed labels for the built-in default statuses (pending/confirmed/done/cancelled)
+// are stored separately since those keys aren't part of customStatuses.
+function loadStatusLabelOverrides(){
+  try{
+    const saved=localStorage.getItem('statusLabelOverrides');
+    if(saved){
+      const obj=JSON.parse(saved);
+      Object.keys(obj).forEach(k=>{
+        if(obj[k]&&STATUS_ORDER_DEFAULT.includes(k)){STATUS_LBL[k]=obj[k];STATUS_PLAIN[k]=obj[k];}
+      });
+      return obj;
+    }
+  }catch(e){}
+  return {};
+}
+function saveStatusLabelOverride(key,label){
+  let overrides={};
+  try{overrides=JSON.parse(localStorage.getItem('statusLabelOverrides')||'{}');}catch(e){}
+  overrides[key]=label;
+  try{localStorage.setItem('statusLabelOverrides',JSON.stringify(overrides));}catch(e){}
+}
 loadCustomStatuses();
+loadStatusLabelOverrides();
 // ─── Vivid color helpers (for status-based chip/dot coloring) ───
 function hexToRgb(hex){
   hex=(hex||'').trim().replace('#','');
@@ -818,6 +853,7 @@ function saveActiveStatuses(){
   try{localStorage.setItem('activeStatuses',JSON.stringify(activeStatuses));}catch(e){}
 }
 let activeStatuses=loadActiveStatuses();
+let editingStatusKey=null;
 function statusOptionsHTML(selectedKey,blankLabel){
   let html=blankLabel?`<option value="">${blankLabel}</option>`:'';
   activeStatuses.forEach(k=>{html+=`<option value="${k}" ${k===selectedKey?'selected':''}>${STATUS_LBL[k]}</option>`;});
@@ -832,10 +868,21 @@ function renderStatusSettingsRows(){
   if(!box)return;
   box.innerHTML=activeStatuses.map(k=>{
     const suf=STATUS_ID_SUFFIX[k];
+    if(k===editingStatusKey){
+      return `<div class="color-row" data-status="${k}">
+        <input type="text" class="form-input status-label-edit" id="editStatusLabelInput" value="${STATUS_PLAIN[k]}"
+          onkeydown="if(event.key==='Enter')saveStatusLabel('${k}');if(event.key==='Escape')cancelEditStatusLabel();">
+        <span class="color-row-preview" id="preview${suf}">ตัวอย่าง</span>
+        <input type="color" id="color${suf}" data-status="${k}">
+        <button class="btn-status-save" title="บันทึก" onclick="saveStatusLabel('${k}')">✔</button>
+        <button class="btn-status-cancel" title="ยกเลิก" onclick="cancelEditStatusLabel()">✕</button>
+      </div>`;
+    }
     return `<div class="color-row" data-status="${k}">
       <span class="color-row-label">${STATUS_LBL[k]}</span>
       <span class="color-row-preview" id="preview${suf}">ตัวอย่าง</span>
       <input type="color" id="color${suf}" data-status="${k}">
+      <button class="btn-status-edit" title="แก้ไขชื่อสถานะ" onclick="editStatusLabel('${k}')">✏️</button>
       <button class="btn-status-delete" title="ลบสถานะนี้" onclick="deleteStatus('${k}')">🗑</button>
     </div>`;
   }).join('') || `<div class="settings-card-desc">ไม่มีสถานะเหลืออยู่ กด "ค่าเริ่มต้น" เพื่อคืนสถานะทั้งหมด</div>`;
@@ -904,6 +951,36 @@ function deleteStatus(key){
   populateColorInputs(loadStatusColors());
   pushSettingsToDB();
   toast(`ลบสถานะ "${label}" แล้ว`,'success');
+}
+function editStatusLabel(key){
+  editingStatusKey=key;
+  renderStatusSettingsRows();
+  populateColorInputs(loadStatusColors());
+  const inp=document.getElementById('editStatusLabelInput');
+  if(inp){inp.focus();inp.select();}
+}
+function cancelEditStatusLabel(){
+  editingStatusKey=null;
+  renderStatusSettingsRows();
+  populateColorInputs(loadStatusColors());
+}
+function saveStatusLabel(key){
+  const inp=document.getElementById('editStatusLabelInput');
+  const val=(inp?inp.value:'').trim();
+  if(!val){toast('กรุณาใส่ชื่อสถานะ','error');return;}
+  STATUS_LBL[key]=val;
+  STATUS_PLAIN[key]=val;
+  if(STATUS_ORDER_DEFAULT.includes(key)){
+    saveStatusLabelOverride(key,val);
+  }else{
+    saveCustomStatuses();
+  }
+  editingStatusKey=null;
+  refreshStatusSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
+  renderStatusSettingsRows();
+  populateColorInputs(loadStatusColors());
+  pushSettingsToDB();
+  toast(`เปลี่ยนชื่อสถานะเป็น "${val}" แล้ว ✅`,'success');
 }
 function showAddStatusForm(){
   document.getElementById('addStatusRow').style.display='flex';
@@ -1311,6 +1388,7 @@ async function pushSettingsToDB(){
       proc_colors:loadProcColors(),
       custom_proc_types:customProcTypes,
       quick_links:quickLinks,
+      status_label_overrides:loadStatusLabelOverrides(),
     };
     // Retry loop: if the DB schema is missing a column this app version expects
     // (e.g. a migration hasn't been run yet), strip that one column and retry —
@@ -1350,6 +1428,13 @@ async function pullFromSupabaseOnLoad(){
       if(settingsRow.status_colors){
         try{localStorage.setItem('statusColors',JSON.stringify(settingsRow.status_colors));}catch(e){}
         applyStatusColors(settingsRow.status_colors);
+      }
+      if(settingsRow.status_label_overrides&&typeof settingsRow.status_label_overrides==='object'){
+        try{localStorage.setItem('statusLabelOverrides',JSON.stringify(settingsRow.status_label_overrides));}catch(e){}
+        Object.keys(settingsRow.status_label_overrides).forEach(k=>{
+          const v=settingsRow.status_label_overrides[k];
+          if(v&&STATUS_ORDER_DEFAULT.includes(k)){STATUS_LBL[k]=v;STATUS_PLAIN[k]=v;}
+        });
       }
       if(Array.isArray(settingsRow.custom_proc_types)){
         settingsRow.custom_proc_types.forEach(cp=>{
