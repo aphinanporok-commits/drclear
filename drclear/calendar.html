@@ -1126,7 +1126,7 @@ function renderProcSettingsRows(){
       </div>`;
     }
     return `<div class="color-row proc-color-row" data-proc="${k}">
-      <span class="color-row-label">${PROC_ICON[k]||'📋'} ${PROC_LABELS[k]}</span>
+      <span class="color-row-label">${PROC_LABELS[k]}</span>
       <span class="color-row-preview" id="procPreview${suf}">ตัวอย่าง</span>
       <input type="color" id="procColor${suf}" data-proc="${k}">
       <button class="btn-status-edit" title="แก้ไขชื่อ" onclick="editProcLabel('${k}')">✏️</button>
