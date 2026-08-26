@@ -208,11 +208,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .apt-card{
   display:grid;grid-template-columns:1fr auto auto;
   align-items:center;gap:10px;
-  background:var(--surface);border:1px solid var(--cal-border);
+  background:color-mix(in srgb,var(--card-c,transparent) 7%,var(--surface));
+  border:1px solid var(--cal-border);border-left:4px solid var(--card-c,var(--cal-border));
   border-radius:9px;padding:8px 12px;margin-bottom:5px;
-  transition:border-color .15s,box-shadow .15s;
+  transition:border-color .15s,box-shadow .15s,background-color .15s;
 }
-.apt-card:hover{border-color:var(--primary);box-shadow:0 2px 12px rgba(27,111,168,.1);}
+.apt-card:hover{border-color:var(--primary);border-left-color:var(--card-c,var(--primary));box-shadow:0 2px 12px rgba(27,111,168,.1);}
 .apt-card-check{display:flex;align-items:center;justify-content:center;}
 .apt-card-time-box{text-align:center;}
 .apt-card-time{font-size:15px;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums;line-height:1.1;}
@@ -601,15 +602,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="settings-card-head" onclick="toggleSettingsCard('proc')">
         <div>
           <div class="settings-card-title">สถานะ</div>
-          <div class="settings-card-desc">เพิ่ม/ลบ/กำหนดสีประเภทการรักษา ระบบจะนำไปใช้กับป้ายประเภทและตัวเลือกในฟอร์มนัดหมายทั้งหมด</div>
+          <div class="settings-card-desc">เพิ่ม/ลบ/กำหนดสีสถานะ ระบบจะนำไปใช้กับป้ายและตัวเลือกในฟอร์มนัดหมายทั้งหมด</div>
         </div>
         <button class="settings-card-toggle" id="toggleProc" title="ย่อ/ขยาย">▾</button>
       </div>
       <div class="settings-card-body" id="bodyProc">
         <div id="procRowsContainer"></div>
-        <button class="btn-add-status" id="btnShowAddProc" onclick="showAddProcForm()">➕ เพิ่มประเภทการรักษาใหม่</button>
+        <button class="btn-add-status" id="btnShowAddProc" onclick="showAddProcForm()">➕ เพิ่มสถานะใหม่</button>
         <div class="add-status-row" id="addProcRow" style="display:none;">
-          <input type="text" class="form-input" id="newProcLabel" placeholder="ชื่อประเภทใหม่ เช่น รีเทนเนอร์">
+          <input type="text" class="form-input" id="newProcLabel" placeholder="ชื่อสถานะใหม่ เช่น รีเทนเนอร์">
           <input type="color" id="newProcColor" value="#8E44AD">
           <button class="btn-settings-save" onclick="confirmAddProc()">✔ เพิ่ม</button>
           <button class="btn-settings-reset" onclick="cancelAddProc()">ยกเลิก</button>
@@ -668,7 +669,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </div>
       </div>
       <div class="form-row" style="margin-top:12px">
-        <label class="form-label">ประเภทการรักษา</label>
+        <label class="form-label">สถานะ</label>
         <select class="form-select" id="fProc">
           <option value="checkup">🦷 ตรวจฟัน</option>
           <option value="aligner">😁 จัดฟัน Clear Aligner</option>
@@ -684,7 +685,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
       <div class="form-row-2">
         <div class="form-row" style="margin-bottom:0">
-          <label class="form-label">สถานะ</label>
+          <label class="form-label">ถึงขั้นตอนไหน</label>
           <select class="form-select" id="fStatus">
             <option value="pending">⏳ รอยืนยัน</option>
             <option value="confirmed">✅ ยืนยันแล้ว</option>
@@ -1129,9 +1130,9 @@ function renderProcSettingsRows(){
       <span class="color-row-preview" id="procPreview${suf}">ตัวอย่าง</span>
       <input type="color" id="procColor${suf}" data-proc="${k}">
       <button class="btn-status-edit" title="แก้ไขชื่อ" onclick="editProcLabel('${k}')">✏️</button>
-      <button class="btn-status-delete" title="ลบประเภทนี้" onclick="deleteProcType('${k}')">🗑</button>
+      <button class="btn-status-delete" title="ลบสถานะนี้" onclick="deleteProcType('${k}')">🗑</button>
     </div>`;
-  }).join('') || `<div class="settings-card-desc">ไม่มีประเภทการรักษาเหลืออยู่ กด "ค่าเริ่มต้น" เพื่อคืนทั้งหมด</div>`;
+  }).join('') || `<div class="settings-card-desc">ไม่มีสถานะเหลืออยู่ กด "ค่าเริ่มต้น" เพื่อคืนทั้งหมด</div>`;
 }
 function populateProcColorInputs(colors){
   renderProcSettingsRows();
@@ -1160,7 +1161,7 @@ function saveProcColors(){
   try{localStorage.setItem('procColors',JSON.stringify(colors));}catch(e){}
   applyProcColors(colors);
   pushSettingsToDB();
-  toast('บันทึกสีประเภทการรักษาเรียบร้อย ✅','success');
+  toast('บันทึกสีสถานะเรียบร้อย ✅','success');
 }
 function resetProcColors(){
   const customKeys=Object.keys(PROC_LABELS).filter(k=>!PROC_ORDER_DEFAULT.includes(k));
@@ -1175,20 +1176,20 @@ function resetProcColors(){
   populateProcColorInputs(PROC_COLORS_DEFAULT);
   refreshProcSelects();renderList();renderCalendar();
   pushSettingsToDB();
-  toast('รีเซ็ตประเภทการรักษาและสีเป็นค่าเริ่มต้นทั้งหมด (รวมลบประเภทที่สร้างเอง)','info');
+  toast('รีเซ็ตสถานะและสีเป็นค่าเริ่มต้นทั้งหมด (รวมลบสถานะที่สร้างเอง)','info');
 }
 function deleteProcType(key){
-  if(activeProcTypes.length<=1){toast('ต้องมีอย่างน้อย 1 ประเภทการรักษาในระบบ','error');return;}
+  if(activeProcTypes.length<=1){toast('ต้องมีอย่างน้อย 1 สถานะในระบบ','error');return;}
   const inUse=allApts.filter(a=>a.procedure_type===key);
   const label=PROC_LABELS[key]||key;
   if(inUse.length>0){
     const fallback=activeProcTypes.find(k=>k!==key);
-    const ok=confirm(`มีนัดหมาย ${inUse.length} รายการที่ใช้ประเภท "${label}" อยู่\nหากลบ ระบบจะเปลี่ยนรายการเหล่านั้นเป็นประเภท "${PROC_LABELS[fallback]}" แทน\n\nต้องการลบประเภท "${label}" ถาวรหรือไม่?`);
+    const ok=confirm(`มีนัดหมาย ${inUse.length} รายการที่ใช้สถานะ "${label}" อยู่\nหากลบ ระบบจะเปลี่ยนรายการเหล่านั้นเป็นสถานะ "${PROC_LABELS[fallback]}" แทน\n\nต้องการลบสถานะ "${label}" ถาวรหรือไม่?`);
     if(!ok)return;
     inUse.forEach(a=>{a.procedure_type=fallback;});
     saveAppointments();
   }else{
-    if(!confirm(`ต้องการลบประเภท "${label}" ถาวรหรือไม่?`))return;
+    if(!confirm(`ต้องการลบสถานะ "${label}" ถาวรหรือไม่?`))return;
   }
   activeProcTypes=activeProcTypes.filter(k=>k!==key);
   saveActiveProcTypes();
@@ -1196,7 +1197,7 @@ function deleteProcType(key){
   refreshProcSelects();renderList();renderCalendar();
   populateProcColorInputs(loadProcColors());
   pushSettingsToDB();
-  toast(`ลบประเภท "${label}" แล้ว`,'success');
+  toast(`ลบสถานะ "${label}" แล้ว`,'success');
 }
 function editProcLabel(key){
   editingProcKey=key;
@@ -1241,7 +1242,7 @@ function cancelAddProc(){
 function confirmAddProc(){
   const label=document.getElementById('newProcLabel').value.trim();
   const color=document.getElementById('newProcColor').value||'#8E44AD';
-  if(!label){toast('กรุณาใส่ชื่อประเภทการรักษา','error');return;}
+  if(!label){toast('กรุณาใส่ชื่อสถานะ','error');return;}
   addProcType(label,color);
   cancelAddProc();
 }
@@ -1743,7 +1744,7 @@ function goToListPage(p){
 }
 
 function aptCard(apt){
-  return `<div class="apt-card" id="card-${apt.id}">
+  return `<div class="apt-card" id="card-${apt.id}" style="--card-c:var(--status-${apt.status})">
     <div style="min-width:0;">
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:13.5px;font-weight:700;">${apt.time?apt.time.slice(0,5):'--:--'}</span>
