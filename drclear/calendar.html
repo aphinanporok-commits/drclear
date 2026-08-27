@@ -350,10 +350,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   border-radius:10px;padding:13px 18px;min-width:150px;flex:1;box-shadow:var(--shadow);}
 .stat-card-label{font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:4px;}
 .stat-card-value{font-size:24px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
-.stat-today{border-left-color:var(--primary);}
-.stat-week{border-left-color:#8E44AD;}
-.stat-month{border-left-color:#27AE60;}
-.stat-pending{border-left-color:#F39C12;}
 .cal-card{background:var(--surface);border:1px solid var(--cal-border);border-radius:14px;
   overflow:hidden;box-shadow:var(--shadow);}
 
@@ -505,21 +501,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div class="page" id="page-calendar">
   <div class="cal-page-inner">
     <div class="cal-stats-row">
-      <div class="stat-card stat-today">
-        <div class="stat-card-label">วันนี้</div>
-        <div class="stat-card-value" id="statToday">–</div>
+      <div class="stat-card" style="border-left-color:var(--status-msAppointment)">
+        <div class="stat-card-label">Appointment</div>
+        <div class="stat-card-value" id="statMsAppointment">–</div>
       </div>
-      <div class="stat-card stat-week">
-        <div class="stat-card-label">สัปดาห์นี้</div>
-        <div class="stat-card-value" id="statWeek">–</div>
+      <div class="stat-card" style="border-left-color:var(--status-msScanDone)">
+        <div class="stat-card-label">Scan Done</div>
+        <div class="stat-card-value" id="statMsScanDone">–</div>
       </div>
-      <div class="stat-card stat-month">
-        <div class="stat-card-label">เดือนนี้</div>
-        <div class="stat-card-value" id="statMonth">–</div>
-      </div>
-      <div class="stat-card stat-pending">
-        <div class="stat-card-label">รอยืนยัน</div>
-        <div class="stat-card-value" id="statPending">–</div>
+      <div class="stat-card" style="border-left-color:var(--status-msCommence)">
+        <div class="stat-card-label">Commence</div>
+        <div class="stat-card-value" id="statMsCommence">–</div>
       </div>
     </div>
     <div class="cal-card">
@@ -766,6 +758,46 @@ const STATUS_PLAIN={pending:'รอยืนยัน',confirmed:'ยืนย�
 const STATUS_COLORS_DEFAULT={pending:'#F39C12',confirmed:'#27AE60',done:'#2980B9',cancelled:'#E74C3C'};
 const STATUS_ORDER_DEFAULT=['pending','confirmed','done','cancelled'];
 const STATUS_ID_SUFFIX={pending:'Pending',confirmed:'Confirmed',done:'Done',cancelled:'Cancelled'};
+// ─── Sales-funnel milestones (cumulative KPI stages, layered on top of the
+// normal appointment statuses above) ───
+const MILESTONE_ORDER=['msAppointment','msScanDone','msCommence'];
+const MILESTONE_LABELS={msAppointment:'Appointment',msScanDone:'Scan Done',msCommence:'Commence'};
+const MILESTONE_COLORS={msAppointment:'#2E86C1',msScanDone:'#8E44AD',msCommence:'#27AE60'};
+// Ensure the 3 milestone statuses exist and are selectable; safe to call repeatedly.
+function seedMilestoneStatuses(){
+  let changed=false;
+  MILESTONE_ORDER.forEach(key=>{
+    if(STATUS_PLAIN[key]===undefined){
+      STATUS_LBL[key]=MILESTONE_LABELS[key];
+      STATUS_PLAIN[key]=MILESTONE_LABELS[key];
+      STATUS_COLORS_DEFAULT[key]=MILESTONE_COLORS[key];
+      STATUS_ID_SUFFIX[key]=key;
+      changed=true;
+    }
+    if(typeof activeStatuses!=='undefined'&&!activeStatuses.includes(key)){
+      activeStatuses.push(key);
+      changed=true;
+    }
+  });
+  if(changed&&typeof activeStatuses!=='undefined'){
+    saveActiveStatuses();
+    saveCustomStatuses();
+    const colors=loadStatusColors();
+    MILESTONE_ORDER.forEach(key=>{if(colors[key]===undefined)colors[key]=MILESTONE_COLORS[key];});
+    try{localStorage.setItem('statusColors',JSON.stringify(colors));}catch(e){}
+    applyStatusColors(colors);
+  }
+  return changed;
+}
+// Mark a milestone (and every earlier milestone in the funnel) as reached — reached
+// stages are never un-marked, so KPI counts stay cumulative even if the current
+// status later moves elsewhere.
+function markMilestone(apt,statusKey){
+  const idx=MILESTONE_ORDER.indexOf(statusKey);
+  if(idx===-1)return;
+  if(!apt.milestones||typeof apt.milestones!=='object')apt.milestones={};
+  for(let i=0;i<=idx;i++)apt.milestones[MILESTONE_ORDER[i]]=true;
+}
 // ─── Custom statuses (persisted beyond the fixed 4) ───
 function loadCustomStatuses(){
   try{
@@ -854,6 +886,7 @@ function saveActiveStatuses(){
   try{localStorage.setItem('activeStatuses',JSON.stringify(activeStatuses));}catch(e){}
 }
 let activeStatuses=loadActiveStatuses();
+seedMilestoneStatuses();
 let editingStatusKey=null;
 function statusOptionsHTML(selectedKey,blankLabel){
   let html=blankLabel?`<option value="">${blankLabel}</option>`:'';
@@ -1420,8 +1453,22 @@ function syncAppointmentsToDB(){
   clearTimeout(aptUpsertTimer);
   aptUpsertTimer=setTimeout(async()=>{
     try{
-      const {error}=await sb.from('appointments').upsert(allApts,{onConflict:'id'});
-      if(error){console.error('appointments upsert error',error);toast('ซิงก์ข้อมูลนัดหมายไปฐานข้อมูลไม่สำเร็จ (บันทึกในเครื่องไว้แล้ว)','error');}
+      // Retry loop: same idea as pushSettingsToDB — if a column this app version
+      // expects (e.g. "milestones") is missing until a migration is run, strip it
+      // from every row and retry so the rest of the appointment still syncs.
+      let rows=allApts;
+      for(let attempt=0;attempt<5;attempt++){
+        const {error}=await sb.from('appointments').upsert(rows,{onConflict:'id'});
+        if(!error)break;
+        console.error('appointments upsert error',error);
+        const m=String(error.message||'').match(/'([a-z_]+)' column/);
+        if(m&&m[1]&&rows.some(r=>Object.prototype.hasOwnProperty.call(r,m[1]))){
+          rows=rows.map(r=>{const c=Object.assign({},r);delete c[m[1]];return c;});
+          continue;
+        }
+        toast('ซิงก์ข้อมูลนัดหมายไปฐานข้อมูลไม่สำเร็จ (บันทึกในเครื่องไว้แล้ว)','error');
+        break;
+      }
     }catch(e){console.error(e);}
   },400);
 }
@@ -1534,6 +1581,7 @@ async function pullFromSupabaseOnLoad(){
     }else if(!settingsErr&&!settingsRow){
       pushSettingsToDB();
     }
+    if(seedMilestoneStatuses())pushSettingsToDB();
     const {data,error}=await sb.from('appointments').select('*');
     if(error){console.error('appointments fetch error',error);return;}
     // DB is the source of truth once reachable — an empty table means genuinely zero
@@ -1621,15 +1669,9 @@ function groupBy(arr,fn){const m={};arr.forEach(a=>{const k=fn(a);(m[k]=m[k]||[]
 
 // ─── Stats ────────────────────────────────────────────
 function updateStats(){
-  const td=todayStr(),now=new Date();
-  const ws=dateStr(new Date(now.getFullYear(),now.getMonth(),now.getDate()-now.getDay()));
-  const we=addDays(ws,6);
-  const ms=dateStr(new Date(now.getFullYear(),now.getMonth(),1));
-  const me=dateStr(new Date(now.getFullYear(),now.getMonth()+1,0));
-  document.getElementById('statToday').textContent  =allApts.filter(a=>a.date===td).length;
-  document.getElementById('statWeek').textContent   =allApts.filter(a=>a.date>=ws&&a.date<=we).length;
-  document.getElementById('statMonth').textContent  =allApts.filter(a=>a.date>=ms&&a.date<=me).length;
-  document.getElementById('statPending').textContent=allApts.filter(a=>a.status==='pending').length;
+  document.getElementById('statMsAppointment').textContent=allApts.filter(a=>a.milestones&&a.milestones.msAppointment).length;
+  document.getElementById('statMsScanDone').textContent   =allApts.filter(a=>a.milestones&&a.milestones.msScanDone).length;
+  document.getElementById('statMsCommence').textContent   =allApts.filter(a=>a.milestones&&a.milestones.msCommence).length;
 }
 
 // ─── Status tabs ──────────────────────────────────────
@@ -1774,6 +1816,7 @@ function aptCard(apt){
 function changeStatus(id,sel){
   const apt=allApts.find(a=>a.id===id);if(!apt)return;
   apt.status=sel.value;
+  markMilestone(apt,sel.value);
   saveAppointments();
   sel.style.setProperty('--pill-c','var(--status-'+sel.value+')');
   toast(`${apt.patient_name} → ${STATUS_PLAIN[sel.value]} ✅`,'success');
@@ -2033,6 +2076,7 @@ function saveApt(){
   const date=document.getElementById('fDate').value;
   const time=getTimeSelects();
   if(!name||!date||!time){toast('กรุณากรอกข้อมูลให้ครบ','error');return;}
+  const prevApt=editingId?allApts.find(a=>a.id===editingId):null;
   const p={
     id:editingId||genId(),patient_name:name,patient_id:null,date,
     time:time+':00',procedure_type:document.getElementById('fProc').value,
@@ -2045,7 +2089,9 @@ function saveApt(){
     notes:document.getElementById('fNotes').value.trim()||null,
     price:parseFloat(document.getElementById('fPrice').value)||null,
     followup_date:document.getElementById('fFollowup').value||null,
+    milestones:prevApt?Object.assign({},prevApt.milestones||{}):{},
   };
+  markMilestone(p,p.status);
   if(editingId){const idx=allApts.findIndex(a=>a.id===editingId);if(idx>-1)allApts[idx]=p;toast('แก้ไขนัดหมายเรียบร้อย ✅','success');}
   else{allApts.push(p);toast('เพิ่มนัดหมายเรียบร้อย ✅','success');}
   saveAppointments();
