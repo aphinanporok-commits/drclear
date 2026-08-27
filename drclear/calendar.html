@@ -288,6 +288,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(27,111,168,.1);}
 .form-textarea{resize:vertical;min-height:68px;}
 .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.milestone-check-row{display:flex;gap:14px;flex-wrap:wrap;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);}
+.milestone-check{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--text);cursor:pointer;user-select:none;}
+.milestone-check input{cursor:pointer;}
 .modal-foot{padding:0 20px 18px;display:flex;gap:8px;}
 .btn-save  {background:var(--primary);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;flex:1;}
 .btn-save:hover{background:var(--primary-dark);}
@@ -678,7 +681,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="form-row-2">
         <div class="form-row" style="margin-bottom:0">
           <label class="form-label">ถึงขั้นตอนไหน</label>
-          <select class="form-select" id="fStatus">
+          <select class="form-select" id="fStatus" onchange="previewMilestoneOnStatusChange(this.value)">
             <option value="pending">⏳ รอยืนยัน</option>
             <option value="confirmed">✅ ยืนยันแล้ว</option>
             <option value="done">🏁 เสร็จแล้ว</option>
@@ -688,6 +691,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="form-row" style="margin-bottom:0">
           <label class="form-label">ราคา (บาท)</label>
           <input class="form-input" type="number" id="fPrice" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:12px">
+        <label class="form-label">นับเข้า KPI ขั้นไหนแล้วบ้าง <span style="font-weight:400;color:var(--text-muted);font-size:11.5px;">(ติ๊กอัตโนมัติตามสถานะ — แก้เองได้ถ้าใส่ผิด)</span></label>
+        <div class="milestone-check-row">
+          <label class="milestone-check"><input type="checkbox" id="fMsAppointment"> Appointment</label>
+          <label class="milestone-check"><input type="checkbox" id="fMsScanDone"> Scan Done</label>
+          <label class="milestone-check"><input type="checkbox" id="fMsCommence"> Commence</label>
         </div>
       </div>
       <div class="form-row" style="margin-top:12px">
@@ -2067,16 +2078,34 @@ function openModal(s,apt){
   document.getElementById('fPrice').value=apt?(apt.price||''):'';
   document.getElementById('fNotes').value=apt?(apt.notes||''):'';
   document.getElementById('fFollowup').value=apt?(apt.followup_date||''):'';
+  const ms=apt?(apt.milestones||{}):{};
+  document.getElementById('fMsAppointment').checked=!!ms.msAppointment;
+  document.getElementById('fMsScanDone').checked=!!ms.msScanDone;
+  document.getElementById('fMsCommence').checked=!!ms.msCommence;
+  // Backfill: if the record's current status is a milestone stage but its saved
+  // milestones data is missing/stale, reflect that in the checkboxes too (only
+  // ever ticks — never overrides an already-correct manual uncheck).
+  previewMilestoneOnStatusChange(document.getElementById('fStatus').value);
   document.getElementById('patSuggest').style.display='none';
   document.getElementById('modalOverlay').classList.add('open');
 }
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open');editingId=null;}
+// Ticks the milestone checkboxes cumulatively when the status dropdown is changed
+// in the modal (never un-ticks — staff can still manually uncheck a wrong one).
+function previewMilestoneOnStatusChange(statusKey){
+  const idx=MILESTONE_ORDER.indexOf(statusKey);
+  if(idx===-1)return;
+  const ids=['fMsAppointment','fMsScanDone','fMsCommence'];
+  for(let i=0;i<=idx;i++){
+    const el=document.getElementById(ids[i]);
+    if(el)el.checked=true;
+  }
+}
 function saveApt(){
   const name=document.getElementById('fPatient').value.trim();
   const date=document.getElementById('fDate').value;
   const time=getTimeSelects();
   if(!name||!date||!time){toast('กรุณากรอกข้อมูลให้ครบ','error');return;}
-  const prevApt=editingId?allApts.find(a=>a.id===editingId):null;
   const p={
     id:editingId||genId(),patient_name:name,patient_id:null,date,
     time:time+':00',procedure_type:document.getElementById('fProc').value,
@@ -2089,9 +2118,15 @@ function saveApt(){
     notes:document.getElementById('fNotes').value.trim()||null,
     price:parseFloat(document.getElementById('fPrice').value)||null,
     followup_date:document.getElementById('fFollowup').value||null,
-    milestones:prevApt?Object.assign({},prevApt.milestones||{}):{},
+    // The checkboxes are the source of truth here (auto-ticked cumulatively as the
+    // status dropdown changes, but staff can manually correct a wrong one) — this
+    // lets a mistaken milestone be un-counted without touching raw data.
+    milestones:{
+      msAppointment:document.getElementById('fMsAppointment').checked,
+      msScanDone:document.getElementById('fMsScanDone').checked,
+      msCommence:document.getElementById('fMsCommence').checked,
+    },
   };
-  markMilestone(p,p.status);
   if(editingId){const idx=allApts.findIndex(a=>a.id===editingId);if(idx>-1)allApts[idx]=p;toast('แก้ไขนัดหมายเรียบร้อย ✅','success');}
   else{allApts.push(p);toast('เพิ่มนัดหมายเรียบร้อย ✅','success');}
   saveAppointments();
