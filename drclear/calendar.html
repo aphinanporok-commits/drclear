@@ -2241,6 +2241,7 @@ function exportFollowupExcel(){
     '#':i+1,
     'ชื่อลูกค้า':a.patient_name||'',
     'เบอร์โทร':a.phone||'',
+    'ช่องทาง':SOURCE_LABELS[a.source]||a.source||'',
     'วันที่นัด':fmtDate(a.date),
     'เวลา':a.time?a.time.slice(0,5):'',
     'สถานะ (ถึงขั้นตอนไหน)':STATUS_PLAIN[a.status]||a.status||'',
@@ -2248,7 +2249,7 @@ function exportFollowupExcel(){
     'ติดต่อครั้งถัดไป':a.followup_date?fmtDate(a.followup_date):'',
   }));
   const ws=XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:4},{wch:22},{wch:14},{wch:14},{wch:8},{wch:20},{wch:36},{wch:16}];
+  ws['!cols']=[{wch:4},{wch:22},{wch:14},{wch:14},{wch:14},{wch:8},{wch:20},{wch:36},{wch:16}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'สรุปติดตามลูกค้า');
   XLSX.writeFile(wb,'สรุปติดตามลูกค้า_'+todayStr()+'.xlsx');
@@ -2262,7 +2263,7 @@ async function exportFollowupPDF(){
   if(!allApts.length){toast('ไม่มีข้อมูลนัดหมายให้สรุป','error');return;}
   const rows=followupSummaryRows();
   const container=document.createElement('div');
-  container.style.cssText='position:fixed;left:-99999px;top:0;width:900px;background:#fff;font-family:Sarabun,sans-serif;padding:28px;color:#1a1a1a;';
+  container.style.cssText='position:fixed;left:-99999px;top:0;width:980px;background:#fff;font-family:Sarabun,sans-serif;padding:28px;color:#1a1a1a;';
   container.innerHTML=`
     <div style="text-align:center;margin-bottom:16px;">
       <div style="font-size:21px;font-weight:800;">🦷 Dr. Clear Aligner</div>
@@ -2274,6 +2275,7 @@ async function exportFollowupPDF(){
         <th style="padding:8px 6px;text-align:left;">#</th>
         <th style="padding:8px 6px;text-align:left;">ลูกค้า</th>
         <th style="padding:8px 6px;text-align:left;">เบอร์โทร</th>
+        <th style="padding:8px 6px;text-align:left;">ช่องทาง</th>
         <th style="padding:8px 6px;text-align:left;">วันที่นัด</th>
         <th style="padding:8px 6px;text-align:left;">สถานะ</th>
         <th style="padding:8px 6px;text-align:left;">หมายเหตุ</th>
@@ -2285,9 +2287,10 @@ async function exportFollowupPDF(){
           <td style="padding:7px 6px;vertical-align:top;">${i+1}</td>
           <td style="padding:7px 6px;font-weight:700;vertical-align:top;">${escapeHtml(a.patient_name)}</td>
           <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;">${escapeHtml(a.phone||'-')}</td>
+          <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;">${escapeHtml(SOURCE_LABELS[a.source]||a.source||'-')}</td>
           <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;">${fmtDate(a.date)}${a.time?' '+a.time.slice(0,5):''}</td>
           <td style="padding:7px 6px;vertical-align:top;"><span style="display:inline-flex;align-items:center;justify-content:center;width:fit-content;padding:1px 9px 4px;line-height:1;border-radius:10px;background:${statusColorValue(a.status)};color:#fff;font-size:10.5px;white-space:nowrap;text-align:center;">${escapeHtml(STATUS_PLAIN[a.status]||a.status||'')}</span></td>
-          <td style="padding:7px 6px;vertical-align:top;max-width:220px;">${escapeHtml(a.notes||'-')}</td>
+          <td style="padding:7px 6px;vertical-align:top;max-width:190px;">${escapeHtml(a.notes||'-')}</td>
           <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;${a.followup_date?'color:#c0392b;font-weight:700;':'color:#999;'}">${a.followup_date?fmtDate(a.followup_date):'-'}</td>
         </tr>`).join('')}
       </tbody>
