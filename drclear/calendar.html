@@ -1423,6 +1423,7 @@ const TH_MONTHS=['มกราคม','กุมภาพันธ์','มี�
   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const DAY_NAMES=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const DAY_SHORT=['อา','จ','อ','พ','พฤ','ศ','ส'];
+const TH_MONTHS_SHORT=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
 // ─── Demo data ────────────────────────────────────────
 const today=new Date(), Y=today.getFullYear(), M=today.getMonth();
@@ -1687,6 +1688,10 @@ function fmtDateLong(s){
   const d=new Date(s+'T00:00:00');
   return `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
 }
+function fmtDateShort(s){
+  const d=new Date(s+'T00:00:00');
+  return `${d.getDate()} ${TH_MONTHS_SHORT[d.getMonth()]}`;
+}
 function groupBy(arr,fn){const m={};arr.forEach(a=>{const k=fn(a);(m[k]=m[k]||[]).push(a);});return m;}
 
 // ─── Stats ────────────────────────────────────────────
@@ -1759,15 +1764,8 @@ function renderList(){
       byStatus[s].forEach(apt=>{ html+=aptCard(apt); });
     });
   } else {
-    // group by date
-    const byDate=groupBy(pageArr,a=>a.date);
-    Object.keys(byDate).sort((a,b)=>sort==='date-desc'?b.localeCompare(a):a.localeCompare(b)).forEach(d=>{
-      const isToday=d===todayStr();
-      const isTomorrow=d===addDays(todayStr(),1);
-      const label=isToday?`📍 วันนี้ — ${fmtDate(d)}`:isTomorrow?`🔜 พรุ่งนี้ — ${fmtDate(d)}`:fmtDateLong(d);
-      html+=`<div class="list-section-head">${label}<span class="list-section-badge">${byDate[d].length} นัด</span></div>`;
-      byDate[d].forEach(apt=>{ html+=aptCard(apt); });
-    });
+    // flat list, sorted by date/time — no per-day section breaks; each card carries its own date
+    pageArr.forEach(apt=>{ html+=aptCard(apt,true); });
   }
 
   body.innerHTML=html;
@@ -1807,10 +1805,20 @@ function goToListPage(p){
   document.getElementById('listBody').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function aptCard(apt){
+function aptCard(apt,showDate){
+  let dateBadge='';
+  if(showDate){
+    const isToday=apt.date===todayStr();
+    const isTomorrow=apt.date===addDays(todayStr(),1);
+    const dLabel=isToday?'วันนี้':isTomorrow?'พรุ่งนี้':fmtDateShort(apt.date);
+    const dColor=isToday?'#1B6FA8':isTomorrow?'#8E44AD':'var(--text-muted)';
+    const dBg=isToday?'rgba(27,111,168,.1)':isTomorrow?'rgba(142,68,173,.1)':'var(--surface-2, rgba(0,0,0,.04))';
+    dateBadge=`<span style="font-size:11px;font-weight:700;color:${dColor};background:${dBg};padding:2px 7px;border-radius:6px;white-space:nowrap;">${dLabel}</span>`;
+  }
   return `<div class="apt-card" id="card-${apt.id}" style="--card-c:var(--status-${apt.status})">
     <div style="min-width:0;">
       <div style="display:flex;align-items:center;gap:6px;">
+        ${dateBadge}
         <span style="font-size:13.5px;font-weight:700;">${apt.time?apt.time.slice(0,5):'--:--'}</span>
         <span class="apt-card-name" style="max-width:220px;">${apt.patient_name}</span>
       </div>
