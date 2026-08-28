@@ -2286,7 +2286,7 @@ async function exportFollowupPDF(){
           <td style="padding:7px 6px;font-weight:700;vertical-align:top;">${escapeHtml(a.patient_name)}</td>
           <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;">${escapeHtml(a.phone||'-')}</td>
           <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;">${fmtDate(a.date)}${a.time?' '+a.time.slice(0,5):''}</td>
-          <td style="padding:7px 6px;vertical-align:top;"><span style="display:inline-flex;align-items:center;justify-content:center;width:fit-content;padding:2px 9px;border-radius:10px;background:${statusColorValue(a.status)};color:#fff;font-size:10.5px;white-space:nowrap;text-align:center;">${escapeHtml(STATUS_PLAIN[a.status]||a.status||'')}</span></td>
+          <td style="padding:7px 6px;vertical-align:top;"><span style="display:inline-flex;align-items:center;justify-content:center;width:fit-content;padding:1px 9px 4px;line-height:1;border-radius:10px;background:${statusColorValue(a.status)};color:#fff;font-size:10.5px;white-space:nowrap;text-align:center;">${escapeHtml(STATUS_PLAIN[a.status]||a.status||'')}</span></td>
           <td style="padding:7px 6px;vertical-align:top;max-width:220px;">${escapeHtml(a.notes||'-')}</td>
           <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;${a.followup_date?'color:#c0392b;font-weight:700;':'color:#999;'}">${a.followup_date?fmtDate(a.followup_date):'-'}</td>
         </tr>`).join('')}
