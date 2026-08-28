@@ -172,17 +172,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .list-search-wrap{position:relative;flex:1;min-width:200px;max-width:320px;}
 .list-search-wrap::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;}
 
-/* status tabs */
-.status-tabs{display:flex;gap:4px;flex-wrap:wrap;}
-.status-tab{padding:6px 14px;border-radius:20px;font-family:var(--font);font-size:13px;font-weight:600;
-  cursor:pointer;border:2px solid transparent;transition:all .15s;white-space:nowrap;}
-.status-tab.t-all     {background:#EBF5FB;color:#1B6FA8;}
-.status-tab{background-color:color-mix(in srgb,var(--tab-c,#999) 18%,var(--surface));
-  color:color-mix(in srgb,var(--tab-c,#999) 80%,black);}
-.status-tab.t-all{background-color:#EBF5FB;color:#1B6FA8;}
-.status-tab.active{border-color:currentColor;box-shadow:0 2px 8px rgba(0,0,0,.1);}
-.tab-count{display:inline-flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.12);border-radius:10px;padding:1px 6px;font-size:11px;margin-left:3px;}
+/* status filter dropdown */
+.status-filter-select{min-width:170px;font-weight:600;}
 
 .sort-select{padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);
   background:var(--surface);font-family:var(--font);font-size:13px;color:var(--text);cursor:pointer;}
@@ -492,7 +483,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
       <div class="list-search-wrap">
         <input class="list-search" id="listSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." oninput="listFilterChanged()">
       </div>
-      <div class="status-tabs" id="statusTabs"></div>
+      <select class="sort-select status-filter-select" id="statusFilterSel" onchange="setFilter(this.value)"></select>
       <select class="sort-select" id="sortSel" onchange="listFilterChanged()">
         <option value="date-asc">วันที่ ↑ เร็วสุด</option>
         <option value="date-desc">วันที่ ↓ ล่าสุด</option>
@@ -1709,10 +1700,10 @@ function renderStatusTabs(){
   allApts.forEach(a=>{counts.all++;if(counts[a.status]!==undefined)counts[a.status]++;});
   const tabs=[{k:'all',label:'ทั้งหมด'}].concat(activeStatuses.map(k=>({k,label:STATUS_PLAIN[k]||k})));
   if(activeFilter!=='all'&&!activeStatuses.includes(activeFilter)) activeFilter='all';
-  document.getElementById('statusTabs').innerHTML=tabs.map(t=>`
-    <button class="status-tab ${t.k==='all'?'t-all':''} ${activeFilter===t.k?'active':''}" ${t.k==='all'?'':`style="--tab-c:var(--status-${t.k})"`} onclick="setFilter('${t.k}')">
-      ${t.label}<span class="tab-count">${counts[t.k]}</span>
-    </button>`).join('');
+  const sel=document.getElementById('statusFilterSel');
+  if(sel){
+    sel.innerHTML=tabs.map(t=>`<option value="${t.k}" ${activeFilter===t.k?'selected':''}>${t.label} (${counts[t.k]})</option>`).join('');
+  }
 }
 
 function setFilter(f){activeFilter=f;listPage=1;renderStatusTabs();renderList();}
