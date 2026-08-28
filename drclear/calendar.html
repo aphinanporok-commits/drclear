@@ -3,6 +3,8 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
@@ -194,6 +196,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   display:flex;align-items:center;gap:6px;}
 .btn-export-excel:hover{background:#155A34;}
 .btn-export-excel:disabled{opacity:.6;cursor:not-allowed;}
+.btn-export-summary{padding:8px 16px;border-radius:8px;background:#8E44AD;color:#fff;border:none;
+  font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  display:flex;align-items:center;gap:6px;}
+.btn-export-summary:hover{background:#6f3689;}
+.btn-export-summary-pdf{background:#C0392B;}
+.btn-export-summary-pdf:hover{background:#992D22;}
 
 /* appointment cards */
 .list-body{flex:1;overflow-y:auto;padding:16px 20px;}
@@ -491,6 +499,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </select>
       <div class="list-toolbar-actions">
         <button class="btn-export-excel" id="btnExportExcel" onclick="exportExcel()">📤 Export Excel</button>
+        <button class="btn-export-summary" id="btnSummaryExcel" onclick="exportFollowupExcel()">📊 สรุปติดตาม (Excel)</button>
+        <button class="btn-export-summary btn-export-summary-pdf" id="btnSummaryPDF" onclick="exportFollowupPDF()">🗒️ สรุปติดตาม (PDF)</button>
         <button class="btn-new-apt" onclick="openModal(null)">+ เพิ่มนัดหมาย</button>
       </div>
     </div>
@@ -2206,6 +2216,111 @@ function exportExcel(){
   XLSX.writeFile(wb,fname);
   toast(`ดาวน์โหลด ${rows.length} รายการเป็น Excel เรียบร้อย ✅`,'success');
 }
+
+// ─── ติดตามลูกค้า summary report (Excel + PDF) ─────────
+// Focused on what the boss actually asks about: appointment/scan/commence stage,
+// the remark/reason from the last contact, and when to follow up next. Sorted so
+// the people who need a callback soonest float to the top.
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function followupSummaryRows(){
+  return allApts.slice().sort((a,b)=>{
+    const fa=a.followup_date||'9999-99-99', fb=b.followup_date||'9999-99-99';
+    return fa.localeCompare(fb) || a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'');
+  });
+}
+function exportFollowupExcel(){
+  if(typeof XLSX==='undefined'){
+    toast('ไม่สามารถโหลดไลบรารี Excel ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่','error');
+    return;
+  }
+  if(!allApts.length){toast('ไม่มีข้อมูลนัดหมายให้สรุป','error');return;}
+  const rows=followupSummaryRows().map((a,i)=>({
+    '#':i+1,
+    'ชื่อลูกค้า':a.patient_name||'',
+    'เบอร์โทร':a.phone||'',
+    'วันที่นัด':fmtDate(a.date),
+    'เวลา':a.time?a.time.slice(0,5):'',
+    'สถานะ (ถึงขั้นตอนไหน)':STATUS_PLAIN[a.status]||a.status||'',
+    'หมายเหตุ / เหตุผลจากการติดต่อ':a.notes||'',
+    'ติดต่อครั้งถัดไป':a.followup_date?fmtDate(a.followup_date):'',
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:4},{wch:22},{wch:14},{wch:14},{wch:8},{wch:20},{wch:36},{wch:16}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'สรุปติดตามลูกค้า');
+  XLSX.writeFile(wb,'สรุปติดตามลูกค้า_'+todayStr()+'.xlsx');
+  toast(`ดาวน์โหลดสรุปติดตามลูกค้า ${rows.length} รายการเป็น Excel เรียบร้อย ✅`,'success');
+}
+async function exportFollowupPDF(){
+  if(typeof html2canvas==='undefined'||typeof window.jspdf==='undefined'){
+    toast('ไม่สามารถโหลดไลบรารีสร้าง PDF ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่','error');
+    return;
+  }
+  if(!allApts.length){toast('ไม่มีข้อมูลนัดหมายให้สรุป','error');return;}
+  const rows=followupSummaryRows();
+  const container=document.createElement('div');
+  container.style.cssText='position:fixed;left:-99999px;top:0;width:900px;background:#fff;font-family:Sarabun,sans-serif;padding:28px;color:#1a1a1a;';
+  container.innerHTML=`
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:21px;font-weight:800;">🦷 Dr. Clear Aligner</div>
+      <div style="font-size:16px;font-weight:700;margin-top:3px;">รายงานสรุปการติดตามลูกค้า</div>
+      <div style="font-size:12px;color:#666;margin-top:3px;">พิมพ์เมื่อ ${fmtDateLong(todayStr())} • ทั้งหมด ${rows.length} รายการ</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#1B6FA8;color:#fff;">
+        <th style="padding:8px 6px;text-align:left;">#</th>
+        <th style="padding:8px 6px;text-align:left;">ลูกค้า</th>
+        <th style="padding:8px 6px;text-align:left;">เบอร์โทร</th>
+        <th style="padding:8px 6px;text-align:left;">วันที่นัด</th>
+        <th style="padding:8px 6px;text-align:left;">สถานะ</th>
+        <th style="padding:8px 6px;text-align:left;">หมายเหตุ</th>
+        <th style="padding:8px 6px;text-align:left;">ติดต่อครั้งถัดไป</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map((a,i)=>`
+        <tr style="background:${i%2?'#f7f9fb':'#fff'};border-bottom:1px solid #e3e8ee;">
+          <td style="padding:7px 6px;vertical-align:top;">${i+1}</td>
+          <td style="padding:7px 6px;font-weight:700;vertical-align:top;">${escapeHtml(a.patient_name)}</td>
+          <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;">${escapeHtml(a.phone||'-')}</td>
+          <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;">${fmtDate(a.date)}${a.time?' '+a.time.slice(0,5):''}</td>
+          <td style="padding:7px 6px;vertical-align:top;"><span style="display:inline-block;padding:2px 9px;border-radius:10px;background:${statusColorValue(a.status)};color:#fff;font-size:10.5px;white-space:nowrap;">${escapeHtml(STATUS_PLAIN[a.status]||a.status||'')}</span></td>
+          <td style="padding:7px 6px;vertical-align:top;max-width:220px;">${escapeHtml(a.notes||'-')}</td>
+          <td style="padding:7px 6px;vertical-align:top;white-space:nowrap;${a.followup_date?'color:#c0392b;font-weight:700;':'color:#999;'}">${a.followup_date?fmtDate(a.followup_date):'-'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+  document.body.appendChild(container);
+  try{
+    const canvas=await html2canvas(container,{scale:2,useCORS:true});
+    const imgData=canvas.toDataURL('image/png');
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'p',unit:'pt',format:'a4'});
+    const pageW=pdf.internal.pageSize.getWidth();
+    const pageH=pdf.internal.pageSize.getHeight();
+    const imgW=pageW;
+    const imgH=canvas.height*imgW/canvas.width;
+    let heightLeft=imgH, position=0;
+    pdf.addImage(imgData,'PNG',0,position,imgW,imgH);
+    heightLeft-=pageH;
+    while(heightLeft>0){
+      position=heightLeft-imgH;
+      pdf.addPage();
+      pdf.addImage(imgData,'PNG',0,position,imgW,imgH);
+      heightLeft-=pageH;
+    }
+    pdf.save('สรุปติดตามลูกค้า_'+todayStr()+'.pdf');
+    toast(`ดาวน์โหลดสรุปติดตามลูกค้า ${rows.length} รายการเป็น PDF เรียบร้อย ✅`,'success');
+  }catch(e){
+    console.error(e);
+    toast('สร้าง PDF ไม่สำเร็จ','error');
+  }finally{
+    document.body.removeChild(container);
+  }
+}
+
 // ─── Init ─────────────────────────────────────────────
 loadStatusColors();
 refreshStatusSelects();
