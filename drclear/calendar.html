@@ -29,7 +29,8 @@
   --bg:#111927;--surface:#1A2332;--navbar-bg:#0F1A28;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);}
 
 /* ── Navbar ── */
 .navbar{background:var(--navbar-bg);height:56px;display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:300;}
@@ -160,7 +161,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* sticky toolbar */
 .list-toolbar{
   background:var(--surface);border-bottom:1px solid var(--cal-border);
-  padding:14px 20px;position:sticky;top:56px;z-index:100;
+  padding:14px 20px;
   display:flex;flex-wrap:wrap;gap:10px;align-items:center;
 }
 .list-toolbar-title{font-size:18px;font-weight:800;margin-right:4px;}
