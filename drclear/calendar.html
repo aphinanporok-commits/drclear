@@ -44,6 +44,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .nav-btn:hover{background:rgba(255,255,255,.12);color:#fff;}
 .nav-btn.active{background:rgba(255,255,255,.2);color:#fff;}
 
+/* ── Navbar user badge ── */
+.navbar-user{display:flex;align-items:center;gap:9px;margin-left:14px;padding-left:14px;border-left:1px solid rgba(255,255,255,.18);}
+.navbar-user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.25);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;object-fit:cover;}
+.navbar-user-name{font-size:12.5px;font-weight:600;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.navbar-user-signout{background:none;border:none;color:rgba(255,255,255,.65);cursor:pointer;font-size:11.5px;font-weight:600;
+  padding:4px 8px;border-radius:6px;transition:background .15s,color .15s;}
+.navbar-user-signout:hover{background:rgba(255,255,255,.12);color:#fff;}
+
+/* ── Auth gate (Google sign-in) ── */
+.auth-gate{position:fixed;inset:0;z-index:2000;background:var(--bg);display:none;align-items:center;justify-content:center;
+  overflow-y:auto;padding:24px;}
+.auth-gate.open{display:flex;}
+.auth-card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:40px 36px;width:100%;max-width:360px;
+  text-align:center;}
+.auth-logo{font-size:40px;margin-bottom:6px;}
+.auth-title{font-size:19px;font-weight:800;color:var(--text);}
+.auth-sub{font-size:12.5px;color:var(--text-muted);margin-top:3px;margin-bottom:28px;}
+.auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 16px;border-radius:10px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);font-size:14px;font-weight:700;
+  cursor:pointer;transition:background .15s,box-shadow .15s;}
+.auth-google-btn:hover{background:var(--cal-head-bg);box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.auth-note{margin-top:16px;font-size:12px;color:var(--text-muted);min-height:16px;}
+.auth-note.error{color:var(--danger);}
+
 /* ── Pages ── */
 .page{display:none;}.page.active{display:block;}
 
@@ -456,6 +481,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 
 </style>
 
+<!-- ══════════ AUTH GATE (Google sign-in) ══════════ -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-card">
+    <div class="auth-logo">🦷</div>
+    <div class="auth-title">Dr. Clear Aligner</div>
+    <div class="auth-sub">ระบบประเมินฟันลูกค้า — เข้าสู่ระบบเพื่อดูข้อมูลของคุณ</div>
+    <button class="auth-google-btn" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.94v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.94A9 9 0 0 0 0 9c0 1.45.35 2.83.94 4.03l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .94 4.97l3.01 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      เข้าสู่ระบบด้วย Gmail
+    </button>
+    <div class="auth-note" id="authNote"></div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
 <!-- ══════════ NAVBAR ══════════ -->
 <nav class="navbar">
   <a class="navbar-brand" href="#" onclick="showPage('list');return false">
@@ -470,6 +510,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <button class="nav-btn" id="nav-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
     <button class="nav-btn" id="nav-links"    onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="nav-btn" id="nav-settings"  onclick="showPage('settings')">⚙️ ตั้งค่า</button>
+  </div>
+  <div class="navbar-user" id="navbarUser">
+    <img class="navbar-user-avatar" id="navbarUserAvatar" style="display:none;">
+    <div class="navbar-user-name" id="navbarUserName"></div>
+    <button class="navbar-user-signout" onclick="signOut()">ออกจากระบบ</button>
   </div>
 </nav>
 
@@ -798,6 +843,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
+</div><!-- /#appRoot -->
 
 <script>
 // ─── Constants ────────────────────────────────────────
@@ -1521,6 +1567,77 @@ try{
   }
 }catch(e){console.error('Supabase init failed',e);}
 
+// ─── Google sign-in (each staff member only sees their own leads/appointments) ───
+let currentUser=null;
+function signInWithGoogle(){
+  if(!sb){
+    const note=document.getElementById('authNote');
+    if(note){note.textContent='เชื่อมต่อระบบยืนยันตัวตนไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';note.classList.add('error');}
+    return;
+  }
+  sb.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo:window.location.origin+window.location.pathname}
+  });
+}
+function signOut(){
+  if(sb) sb.auth.signOut();
+}
+function showAuthGate(msg){
+  const gate=document.getElementById('authGate');
+  const root=document.getElementById('appRoot');
+  if(gate) gate.classList.add('open');
+  if(root) root.style.display='none';
+  const note=document.getElementById('authNote');
+  if(note){note.textContent=msg||'';note.classList.toggle('error',!!msg);}
+}
+function showAppAfterAuth(user){
+  currentUser=user;
+  const gate=document.getElementById('authGate');
+  const root=document.getElementById('appRoot');
+  if(gate) gate.classList.remove('open');
+  if(root) root.style.display='';
+  const meta=user.user_metadata||{};
+  const displayName=meta.full_name||meta.name||user.email||'';
+  const nameEl=document.getElementById('navbarUserName');
+  const avatarEl=document.getElementById('navbarUserAvatar');
+  if(nameEl) nameEl.textContent=displayName;
+  if(avatarEl){
+    if(meta.avatar_url){avatarEl.src=meta.avatar_url;avatarEl.style.display='';}
+    else{avatarEl.style.display='none';}
+  }
+}
+async function initAuth(){
+  if(!sb){
+    showAuthGate('เชื่อมต่อระบบยืนยันตัวตนไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+    return;
+  }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session&&session.user){ showAppAfterAuth(session.user); afterLogin(); }
+    else{ showAuthGate(); }
+  }catch(e){ console.error('auth init failed',e); showAuthGate('เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่'); }
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session&&session.user){
+      showAppAfterAuth(session.user);
+      afterLogin();
+    }else if(event==='SIGNED_OUT'){
+      currentUser=null;
+      allApts=[];
+      afterLoginDone=false;
+      showAuthGate();
+    }
+  });
+}
+let afterLoginDone=false;
+function afterLogin(){
+  if(afterLoginDone)return; // avoid double-init if onAuthStateChange fires again after getSession
+  afterLoginDone=true;
+  renderTodoPanel();
+  showPage('list');
+  pullFromSupabaseOnLoad();
+}
+
 let aptUpsertTimer=null;
 function syncAppointmentsToDB(){
   if(!sb||!allApts.length)return;
@@ -2241,8 +2358,12 @@ function saveApt(){
   const date=document.getElementById('fDate').value;
   const time=getTimeSelects();
   if(!name||!date||!time){toast('กรุณากรอกข้อมูลให้ครบ','error');return;}
+  // Owner stays with whoever created the lead (so it keeps showing up for them);
+  // brand-new appointments are tagged with the currently signed-in user.
+  const existingApt=editingId?allApts.find(a=>a.id===editingId):null;
+  const ownerId=existingApt?existingApt.owner_id:(currentUser?currentUser.id:null);
   const p={
-    id:editingId||genId(),patient_name:name,patient_id:null,date,
+    id:editingId||genId(),owner_id:ownerId,patient_name:name,patient_id:null,date,
     time:time+':00',procedure_type:document.getElementById('fProc').value,
     status:document.getElementById('fStatus').value,
     phone:document.getElementById('fPhone').value.trim()||null,
@@ -2455,7 +2576,5 @@ refreshStatusSelects();
 loadProcColors();
 refreshProcSelects();
 initTimeSelects();
-renderTodoPanel();
-showPage('list');
-pullFromSupabaseOnLoad();
+initAuth();
 </script>
