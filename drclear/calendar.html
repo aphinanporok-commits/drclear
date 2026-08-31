@@ -1681,6 +1681,7 @@ const patients=[
 ];
 
 let currentDate=new Date(), editingId=null, selectedDate=null;
+let expandedDays=new Set(); // dates whose calendar cell is showing all appointments inline instead of "+N เพิ่มเติม"
 let activeFilter='all';
 let listPage=1;
 const LIST_PAGE_SIZE=10;
@@ -2058,7 +2059,9 @@ function renderCalendar(){
     const apts=(aptMap[s]||[]).sort((a,b)=>a.time.localeCompare(b.time));
     const ch=cell.querySelector('.cal-chips');
     const MAX_CHIPS=5;
-    apts.slice(0,MAX_CHIPS).forEach(apt=>{
+    const isExpanded=expandedDays.has(s);
+    const visibleApts=isExpanded?apts:apts.slice(0,MAX_CHIPS);
+    visibleApts.forEach(apt=>{
       const chip=document.createElement('div');
       chip.className='apt-chip';
       const chipColor=progressColorForApt(apt);
@@ -2080,8 +2083,12 @@ function renderCalendar(){
     if(apts.length>MAX_CHIPS){
       const more=document.createElement('div');
       more.className='apt-more';
-      more.textContent=`+${apts.length-MAX_CHIPS} เพิ่มเติม`;
-      more.onclick=e=>{e.stopPropagation();openDayPanel(s);};
+      more.textContent=isExpanded?'ซ่อน':`+${apts.length-MAX_CHIPS} เพิ่มเติม`;
+      more.onclick=e=>{
+        e.stopPropagation();
+        if(expandedDays.has(s)) expandedDays.delete(s); else expandedDays.add(s);
+        renderCalendar();
+      };
       ch.appendChild(more);
     }
   }
