@@ -353,7 +353,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);
   border-radius:10px;padding:13px 18px;min-width:150px;flex:1;box-shadow:var(--shadow);}
 .stat-card-label{font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:4px;}
-.stat-card-value{font-size:24px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+.stat-card-value{font-size:24px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;
+  display:flex;align-items:baseline;gap:5px;}
+.stat-card-value-target{font-size:14px;font-weight:600;color:var(--text-muted);}
+.stat-card-bar{margin-top:8px;height:5px;border-radius:3px;background:var(--border);overflow:hidden;}
+.stat-card-bar-fill{height:100%;border-radius:3px;background:var(--primary);transition:width .25s;}
+
+.kpi-target-rows{display:flex;flex-direction:column;gap:10px;}
+.kpi-target-row{display:flex;align-items:center;gap:10px;}
+.kpi-target-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+.kpi-target-label{flex:1;font-size:13.5px;font-weight:600;color:var(--text);}
+.kpi-target-input{max-width:120px;text-align:right;}
 .cal-card{background:var(--surface);border:1px solid var(--cal-border);border-radius:14px;
   overflow:hidden;box-shadow:var(--shadow);}
 
@@ -509,15 +519,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <div class="cal-stats-row">
       <div class="stat-card" style="border-left-color:var(--status-msAppointment)">
         <div class="stat-card-label">Appointment</div>
-        <div class="stat-card-value" id="statMsAppointment">–</div>
+        <div class="stat-card-value"><span id="statMsAppointment">–</span><span class="stat-card-value-target" id="targetLabelMsAppointment"></span></div>
+        <div class="stat-card-bar" id="barWrapMsAppointment" style="display:none"><div class="stat-card-bar-fill" id="barMsAppointment" style="background:var(--status-msAppointment)"></div></div>
       </div>
       <div class="stat-card" style="border-left-color:var(--status-msScanDone)">
         <div class="stat-card-label">Scan Done</div>
-        <div class="stat-card-value" id="statMsScanDone">–</div>
+        <div class="stat-card-value"><span id="statMsScanDone">–</span><span class="stat-card-value-target" id="targetLabelMsScanDone"></span></div>
+        <div class="stat-card-bar" id="barWrapMsScanDone" style="display:none"><div class="stat-card-bar-fill" id="barMsScanDone" style="background:var(--status-msScanDone)"></div></div>
       </div>
       <div class="stat-card" style="border-left-color:var(--status-msCommence)">
         <div class="stat-card-label">Commence</div>
-        <div class="stat-card-value" id="statMsCommence">–</div>
+        <div class="stat-card-value"><span id="statMsCommence">–</span><span class="stat-card-value-target" id="targetLabelMsCommence"></span></div>
+        <div class="stat-card-bar" id="barWrapMsCommence" style="display:none"><div class="stat-card-bar-fill" id="barMsCommence" style="background:var(--status-msCommence)"></div></div>
       </div>
     </div>
     <div class="cal-card">
@@ -616,6 +629,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="settings-actions">
           <button class="btn-settings-save" onclick="saveProcColors()">💾 บันทึกสี</button>
           <button class="btn-settings-reset" onclick="resetProcColors()">↺ ค่าเริ่มต้น (คืนประเภทที่ลบด้วย)</button>
+        </div>
+      </div>
+    </div>
+    <div class="settings-card">
+      <div class="settings-card-head" onclick="toggleSettingsCard('kpi')">
+        <div>
+          <div class="settings-card-title">เป้าหมาย KPI</div>
+          <div class="settings-card-desc">ตั้งเป้าจำนวนลูกค้าในแต่ละขั้น ระบบจะโชว์ความคืบหน้าเทียบเป้าที่การ์ด KPI หน้าปฏิทิน</div>
+        </div>
+        <button class="settings-card-toggle" id="toggleKpi" title="ย่อ/ขยาย">▾</button>
+      </div>
+      <div class="settings-card-body" id="bodyKpi">
+        <div class="kpi-target-rows">
+          <div class="kpi-target-row">
+            <span class="kpi-target-dot" style="background:var(--status-msAppointment)"></span>
+            <span class="kpi-target-label">Appointment</span>
+            <input type="number" min="0" class="form-input kpi-target-input" id="targetMsAppointment" placeholder="ไม่ตั้งเป้า">
+          </div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-dot" style="background:var(--status-msScanDone)"></span>
+            <span class="kpi-target-label">Scan Done</span>
+            <input type="number" min="0" class="form-input kpi-target-input" id="targetMsScanDone" placeholder="ไม่ตั้งเป้า">
+          </div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-dot" style="background:var(--status-msCommence)"></span>
+            <span class="kpi-target-label">Commence</span>
+            <input type="number" min="0" class="form-input kpi-target-input" id="targetMsCommence" placeholder="ไม่ตั้งเป้า">
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn-settings-save" onclick="saveKpiTargets()">💾 บันทึกเป้าหมาย</button>
+          <button class="btn-settings-reset" onclick="resetKpiTargets()">↺ ล้างเป้าหมาย</button>
         </div>
       </div>
     </div>
@@ -1530,6 +1575,7 @@ async function pushSettingsToDB(){
       quick_links:quickLinks,
       status_label_overrides:loadStatusLabelOverrides(),
       proc_label_overrides:loadProcLabelOverrides(),
+      kpi_targets:loadKpiTargets(),
     };
     // Retry loop: if the DB schema is missing a column this app version expects
     // (e.g. a migration hasn't been run yet), strip that one column and retry —
@@ -1583,6 +1629,9 @@ async function pullFromSupabaseOnLoad(){
           const v=settingsRow.proc_label_overrides[k];
           if(v&&PROC_ORDER_DEFAULT.includes(k)){PROC_LABELS[k]=v;}
         });
+      }
+      if(settingsRow.kpi_targets&&typeof settingsRow.kpi_targets==='object'){
+        try{localStorage.setItem('kpiTargets',JSON.stringify(settingsRow.kpi_targets));}catch(e){}
       }
       if(Array.isArray(settingsRow.custom_proc_types)){
         settingsRow.custom_proc_types.forEach(cp=>{
@@ -1653,16 +1702,17 @@ function showPage(name){
   if(name==='list'){renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
   if(name==='links'){cancelAddLink();renderLinksPage();}
-  if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());applySettingsCardCollapse();}
+  if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());populateKpiTargetInputs(loadKpiTargets());applySettingsCardCollapse();}
 }
 function loadSettingsCollapseState(){
   try{return JSON.parse(localStorage.getItem('settingsCardCollapsed')||'{}');}catch(e){return {};}
 }
+function settingsCardSuffix(k){ return k.charAt(0).toUpperCase()+k.slice(1); }
 function applySettingsCardCollapse(){
   const state=loadSettingsCollapseState();
-  ['status','proc'].forEach(k=>{
-    const body=document.getElementById('body'+(k==='status'?'Status':'Proc'));
-    const btn=document.getElementById('toggle'+(k==='status'?'Status':'Proc'));
+  ['status','proc','kpi'].forEach(k=>{
+    const body=document.getElementById('body'+settingsCardSuffix(k));
+    const btn=document.getElementById('toggle'+settingsCardSuffix(k));
     if(!body||!btn)return;
     const collapsed=!!state[k];
     body.classList.toggle('collapsed',collapsed);
@@ -1670,7 +1720,7 @@ function applySettingsCardCollapse(){
   });
 }
 function toggleSettingsCard(k){
-  const suffix=k==='status'?'Status':'Proc';
+  const suffix=settingsCardSuffix(k);
   const body=document.getElementById('body'+suffix);
   const btn=document.getElementById('toggle'+suffix);
   if(!body||!btn)return;
@@ -1702,9 +1752,62 @@ function groupBy(arr,fn){const m={};arr.forEach(a=>{const k=fn(a);(m[k]=m[k]||[]
 
 // ─── Stats ────────────────────────────────────────────
 function updateStats(){
-  document.getElementById('statMsAppointment').textContent=allApts.filter(a=>a.milestones&&a.milestones.msAppointment).length;
-  document.getElementById('statMsScanDone').textContent   =allApts.filter(a=>a.milestones&&a.milestones.msScanDone).length;
-  document.getElementById('statMsCommence').textContent   =allApts.filter(a=>a.milestones&&a.milestones.msCommence).length;
+  const counts={
+    msAppointment:allApts.filter(a=>a.milestones&&a.milestones.msAppointment).length,
+    msScanDone:allApts.filter(a=>a.milestones&&a.milestones.msScanDone).length,
+    msCommence:allApts.filter(a=>a.milestones&&a.milestones.msCommence).length,
+  };
+  const targets=loadKpiTargets();
+  MILESTONE_ORDER.forEach(key=>{
+    document.getElementById('stat'+cap(key)).textContent=counts[key];
+    const target=targets[key];
+    const targetLabelEl=document.getElementById('targetLabel'+cap(key));
+    const barWrapEl=document.getElementById('barWrap'+cap(key));
+    const barEl=document.getElementById('bar'+cap(key));
+    if(target&&target>0){
+      if(targetLabelEl) targetLabelEl.textContent='/ '+target;
+      if(barWrapEl) barWrapEl.style.display='';
+      if(barEl) barEl.style.width=Math.min(100,Math.round(counts[key]/target*100))+'%';
+    } else {
+      if(targetLabelEl) targetLabelEl.textContent='';
+      if(barWrapEl) barWrapEl.style.display='none';
+    }
+  });
+}
+function cap(key){ return key.charAt(0).toUpperCase()+key.slice(1); }
+const KPI_TARGET_DEFAULT={msAppointment:0,msScanDone:0,msCommence:0};
+function loadKpiTargets(){
+  let targets=Object.assign({},KPI_TARGET_DEFAULT);
+  try{
+    const saved=localStorage.getItem('kpiTargets');
+    if(saved) targets=Object.assign({},KPI_TARGET_DEFAULT,JSON.parse(saved));
+  }catch(e){}
+  return targets;
+}
+function populateKpiTargetInputs(targets){
+  MILESTONE_ORDER.forEach(key=>{
+    const el=document.getElementById('target'+cap(key));
+    if(el) el.value=targets[key]?targets[key]:'';
+  });
+}
+function saveKpiTargets(){
+  const targets={};
+  MILESTONE_ORDER.forEach(key=>{
+    const el=document.getElementById('target'+cap(key));
+    const v=el?parseInt(el.value,10):0;
+    targets[key]=(v>0)?v:0;
+  });
+  try{localStorage.setItem('kpiTargets',JSON.stringify(targets));}catch(e){}
+  updateStats();
+  pushSettingsToDB();
+  toast('บันทึกเป้าหมาย KPI เรียบร้อย ✅','success');
+}
+function resetKpiTargets(){
+  try{localStorage.removeItem('kpiTargets');}catch(e){}
+  populateKpiTargetInputs(KPI_TARGET_DEFAULT);
+  updateStats();
+  pushSettingsToDB();
+  toast('ล้างเป้าหมาย KPI แล้ว','info');
 }
 
 // ─── Status tabs ──────────────────────────────────────
