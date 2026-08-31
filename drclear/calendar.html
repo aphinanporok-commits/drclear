@@ -874,6 +874,24 @@ function statusColorValue(key){
   const v=getComputedStyle(document.documentElement).getPropertyValue('--status-'+key).trim();
   return v||STATUS_COLORS_DEFAULT[key]||'#999999';
 }
+// Color a lead by how far they've progressed, not just their current status label.
+// Once a lead has reached the Appointment milestone (or further — Scan Done, Commence),
+// show the color of the furthest milestone reached instead of their current status color —
+// UNLESS their status is literally "No status", which always shows its own status color.
+function findNoStatusKey(){
+  for(const k in STATUS_PLAIN){ if(STATUS_PLAIN[k]==='No status') return k; }
+  return null;
+}
+function progressColorForApt(apt){
+  const noStatusKey=findNoStatusKey();
+  if(noStatusKey && apt.status===noStatusKey) return statusColorValue(apt.status);
+  if(apt.milestones){
+    if(apt.milestones.msCommence) return statusColorValue('msCommence');
+    if(apt.milestones.msScanDone) return statusColorValue('msScanDone');
+    if(apt.milestones.msAppointment) return statusColorValue('msAppointment');
+  }
+  return statusColorValue(apt.status);
+}
 function applyStatusColors(colors){
   const root=document.documentElement;
   Object.keys(STATUS_COLORS_DEFAULT).forEach(k=>{
@@ -1944,7 +1962,7 @@ function renderCalendar(){
     apts.slice(0,MAX_CHIPS).forEach(apt=>{
       const chip=document.createElement('div');
       chip.className='apt-chip';
-      const chipColor=statusColorValue(apt.status);
+      const chipColor=progressColorForApt(apt);
       chip.style.background=chipColor;
       chip.style.color=contrastText(chipColor);
       chip.title=(STATUS_PLAIN[apt.status]||apt.status)+' · ลากเพื่อย้ายวัน';
@@ -2036,7 +2054,7 @@ function openDayPanel(s){
           <div class="apt-name">${apt.patient_name}</div>
           <div class="apt-sub">${PROC_LABELS[apt.procedure_type]||''}${apt.price?' · ฿'+Number(apt.price).toLocaleString():''}${apt.source?' · '+(SOURCE_LABELS[apt.source]||apt.source):''}${apt.followup_date?' · 📞 ติดต่อ '+fmtDate(apt.followup_date):''}</div>
         </div>
-        <div class="apt-status-dot" style="background:var(--status-${apt.status},#F39C12)"></div>
+        <div class="apt-status-dot" style="background:${progressColorForApt(apt)}"></div>
       </div>`).join('');
   }
   document.getElementById('dayPanel').classList.add('open');
