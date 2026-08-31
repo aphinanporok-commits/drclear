@@ -876,21 +876,17 @@ function statusColorValue(key){
 }
 // Color a lead by how far they've progressed, not just their current status label.
 // Once a lead has reached the Appointment milestone (or further — Scan Done, Commence),
-// show the color of the furthest milestone reached instead of their current status color —
-// UNLESS their status is literally "No status", which always shows its own status color.
-function findNoStatusKey(){
-  for(const k in STATUS_PLAIN){ if(STATUS_PLAIN[k]==='No status') return k; }
-  return null;
-}
+// show the color of the furthest milestone reached. Before that point — including
+// "No status", which carries no useful info of its own — fall back to the color of
+// their treatment type (procedure_type) instead, since that's more useful at a glance
+// than every not-yet-started lead sharing one flat "No status" color.
 function progressColorForApt(apt){
-  const noStatusKey=findNoStatusKey();
-  if(noStatusKey && apt.status===noStatusKey) return statusColorValue(apt.status);
   if(apt.milestones){
     if(apt.milestones.msCommence) return statusColorValue('msCommence');
     if(apt.milestones.msScanDone) return statusColorValue('msScanDone');
     if(apt.milestones.msAppointment) return statusColorValue('msAppointment');
   }
-  return statusColorValue(apt.status);
+  return procColorValue(apt.procedure_type);
 }
 function applyStatusColors(colors){
   const root=document.documentElement;
