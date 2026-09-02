@@ -1973,14 +1973,16 @@ function groupBy(arr,fn){const m={};arr.forEach(a=>{const k=fn(a);(m[k]=m[k]||[]
 // ─── Stats ────────────────────────────────────────────
 // นับความคืบหน้า KPI เฉพาะรายการที่ "ทำสถานะนั้นสำเร็จจริง" ในเดือนนี้เท่านั้น
 // (ไม่เอาของเดือนก่อนๆ มารวม) — เทียบจากวันที่ติ๊กสำเร็จจริง (milestone_dates) ของ
-// milestone นั้นๆ ไม่ใช่วันนัดหมาย (a.date) เพราะลูกค้าคนหนึ่งอาจตั้งนัดไว้เดือนหนึ่ง
-// แต่เพิ่งมา Scan Done/Commence สำเร็จอีกเดือนนึงก็ได้ — รายการเก่าที่ยังไม่มี
-// milestone_dates (บันทึกไว้ก่อนอัปเดตฟีเจอร์นี้) จะ fallback ไปใช้วันนัดหมายแทน
+// milestone นั้นๆ เท่านั้น "ไม่ใช้วันนัดหมาย (a.date) เป็นตัวสำรองอีกต่อไป" เพราะวันนัด
+// อาจถูกเลื่อน/ใช้เป็นวันติดตามลูกค้าภายหลังได้ ไม่ใช่วันที่บอกว่าขั้นนั้นสำเร็จจริงเมื่อไหร่
+// รายการเก่าที่มี milestone สำเร็จอยู่แล้วแต่ยังไม่เคยมีการบันทึก milestone_dates (เช่น
+// ทำไว้ก่อนอัปเดตฟีเจอร์นี้) จะยังไม่ถูกนับใน KPI เดือนไหนเลย จนกว่าจะมีการแตะ/บันทึก
+// สถานะนั้นอีกครั้ง ซึ่งตอนนั้นระบบจะประทับวันที่จริงให้อัตโนมัติ
 function isInCurrentMonth(dateStr){
   return !!dateStr && dateStr.slice(0,7)===currentMonthKey();
 }
 function milestoneDate(a,key){
-  return (a.milestone_dates&&a.milestone_dates[key])||a.date;
+  return (a.milestone_dates&&a.milestone_dates[key])||null;
 }
 function updateStats(){
   const counts={
