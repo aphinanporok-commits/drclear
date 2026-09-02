@@ -879,6 +879,25 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
   </div>
 </div>
 
+<div class="modal-overlay" id="msDateOverlay">
+  <div class="modal-box" style="max-width:340px;">
+    <div class="modal-head">
+      <span>เลือกวันที่ทำสำเร็จ</span>
+      <button class="modal-close" onclick="closeMsDateModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label" id="msDateLabel">วันที่ทำสถานะนี้สำเร็จ</label>
+        <input class="form-input" type="date" id="msDateInput">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeMsDateModal()">ยกเลิก</button>
+      <button class="btn-save" onclick="confirmMsDateModal()">✅ ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toastWrap"></div>
 </div><!-- /#appRoot -->
 
@@ -936,7 +955,7 @@ function seedMilestoneStatuses(){
 // status later moves elsewhere.
 // เก็บ "วันที่ติ๊กสำเร็จจริง" แยกไว้ใน milestone_dates ด้วย (คนละอันกับวันนัดหมาย apt.date)
 // เพื่อให้ KPI รายเดือนนับจากวันที่ทำสำเร็จจริง ไม่ใช่วันที่ตั้งนัดไว้ตอนแรก
-function markMilestone(apt,statusKey){
+function markMilestone(apt,statusKey,dateOverride){
   const idx=MILESTONE_ORDER.indexOf(statusKey);
   if(idx===-1)return;
   if(!apt.milestones||typeof apt.milestones!=='object')apt.milestones={};
@@ -945,7 +964,7 @@ function markMilestone(apt,statusKey){
     const key=MILESTONE_ORDER[i];
     if(!apt.milestones[key]){
       apt.milestones[key]=true;
-      apt.milestone_dates[key]=todayStr();
+      apt.milestone_dates[key]=dateOverride||todayStr();
     }
   }
 }
@@ -2258,14 +2277,60 @@ function aptCard(apt,showDate){
 }
 
 // ─── Status change (inline) ───────────────────────────
+// เวลาเปลี่ยนสถานะในหน้า "รายการทั้งหมด" แล้วสถานะนั้นตรงกับขั้น KPI
+// (Appointment/Scan Done/Commence) ที่ยังไม่เคยติ๊กมาก่อน ให้เด้งป็อปอัพ
+// ถามวันที่ทำสำเร็จจริงก่อน (ค่าเริ่มต้น = วันนี้ แต่แก้ย้อนหลังได้)
+// แทนที่จะประทับวันนี้ให้อัตโนมัติเงียบๆ — เพื่อให้กรอกข้อมูลย้อนหลังได้แม่นยำ
 function changeStatus(id,sel){
   const apt=allApts.find(a=>a.id===id);if(!apt)return;
-  apt.status=sel.value;
-  markMilestone(apt,sel.value);
+  const newStatus=sel.value;
+  const idx=MILESTONE_ORDER.indexOf(newStatus);
+  let newKeys=[];
+  if(idx!==-1){
+    const ms=apt.milestones||{};
+    for(let i=0;i<=idx;i++){
+      const key=MILESTONE_ORDER[i];
+      if(!ms[key]) newKeys.push(key);
+    }
+  }
+  if(newKeys.length){
+    openMsDateModal(apt,newStatus,sel,newKeys);
+  }else{
+    applyStatusChange(apt,newStatus,sel);
+  }
+}
+function applyStatusChange(apt,newStatus,sel,dateOverride){
+  apt.status=newStatus;
+  markMilestone(apt,newStatus,dateOverride);
   saveAppointments();
-  sel.style.setProperty('--pill-c','var(--status-'+sel.value+')');
-  toast(`${apt.patient_name} → ${STATUS_PLAIN[sel.value]} ✅`,'success');
+  sel.style.setProperty('--pill-c','var(--status-'+newStatus+')');
+  toast(`${apt.patient_name} → ${STATUS_PLAIN[newStatus]} ✅`,'success');
   renderStatusTabs();renderList();updateStats();renderTodoPanel();
+}
+let msDatePending=null;
+function openMsDateModal(apt,newStatus,sel,newKeys){
+  msDatePending={apt,newStatus,sel};
+  const label=newKeys.map(k=>MILESTONE_LABELS[k]||k).join(' + ');
+  document.getElementById('msDateLabel').textContent=`วันที่ทำ "${label}" สำเร็จ`;
+  document.getElementById('msDateInput').value=todayStr();
+  document.getElementById('msDateOverlay').classList.add('open');
+}
+function closeMsDateModal(){
+  // ปิดโดยไม่บันทึก — ให้ select กลับไปค่าเดิม (ยังไม่เปลี่ยนสถานะ)
+  if(msDatePending&&msDatePending.sel){
+    msDatePending.sel.value=msDatePending.apt.status;
+  }
+  msDatePending=null;
+  document.getElementById('msDateOverlay').classList.remove('open');
+}
+function confirmMsDateModal(){
+  if(!msDatePending)return;
+  const chosen=document.getElementById('msDateInput').value;
+  if(!chosen){toast('กรุณาเลือกวันที่','error');return;}
+  const {apt,newStatus,sel}=msDatePending;
+  applyStatusChange(apt,newStatus,sel,chosen);
+  msDatePending=null;
+  document.getElementById('msDateOverlay').classList.remove('open');
 }
 
 // ─── Calendar ─────────────────────────────────────────
