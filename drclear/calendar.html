@@ -2276,11 +2276,37 @@ function aptCard(apt,showDate){
   </div>`;
 }
 
-// ─── Status change (inline) ───────────────────────────
-// เวลาเปลี่ยนสถานะในหน้า "รายการทั้งหมด" แล้วสถานะนั้นตรงกับขั้น KPI
-// (Appointment/Scan Done/Commence) ที่ยังไม่เคยติ๊กมาก่อน ให้เด้งป็อปอัพ
-// ถามวันที่ทำสำเร็จจริงก่อน (ค่าเริ่มต้น = วันนี้ แต่แก้ย้อนหลังได้)
-// แทนที่จะประทับวันนี้ให้อัตโนมัติเงียบๆ — เพื่อให้กรอกข้อมูลย้อนหลังได้แม่นยำ
+// ─── Milestone-date popup (generic, callback-based) ────
+// ใช้ร่วมกันทั้งตอนเปลี่ยนสถานะแบบ inline ในหน้า "รายการทั้งหมด" และตอนติ๊ก/เปลี่ยน
+// milestone checkbox ในฟอร์มแก้ไขนัดหมาย (เปิดจากปฏิทินหรือที่ไหนก็ตาม) — เวลามีขั้น KPI
+// (Appointment/Scan Done/Commence) ที่ "ยังไม่เคยติ๊กมาก่อน" กำลังจะถูกติ๊กใหม่ ให้เด้งป็อปอัพ
+// ถามวันที่ทำสำเร็จจริงก่อน (ค่าเริ่มต้น = วันนี้ แต่แก้ย้อนหลังได้) แทนที่จะประทับวันนี้ให้
+// อัตโนมัติเงียบๆ — เพื่อให้กรอกข้อมูลย้อนหลังได้แม่นยำไม่ว่าจะเปลี่ยนสถานะจากหน้าไหน
+let msDatePending=null;
+function openMsDateModal(newKeys,onConfirm,onCancel){
+  msDatePending={onConfirm,onCancel};
+  const label=newKeys.map(k=>MILESTONE_LABELS[k]||k).join(' + ');
+  document.getElementById('msDateLabel').textContent=`วันที่ทำ "${label}" สำเร็จ`;
+  document.getElementById('msDateInput').value=todayStr();
+  document.getElementById('msDateOverlay').classList.add('open');
+}
+function closeMsDateModal(){
+  const pending=msDatePending;
+  msDatePending=null;
+  document.getElementById('msDateOverlay').classList.remove('open');
+  if(pending&&pending.onCancel)pending.onCancel();
+}
+function confirmMsDateModal(){
+  if(!msDatePending)return;
+  const chosen=document.getElementById('msDateInput').value;
+  if(!chosen){toast('กรุณาเลือกวันที่','error');return;}
+  const {onConfirm}=msDatePending;
+  msDatePending=null;
+  document.getElementById('msDateOverlay').classList.remove('open');
+  onConfirm(chosen);
+}
+
+// ─── Status change (inline, list page) ─────────────────
 function changeStatus(id,sel){
   const apt=allApts.find(a=>a.id===id);if(!apt)return;
   const newStatus=sel.value;
@@ -2294,7 +2320,10 @@ function changeStatus(id,sel){
     }
   }
   if(newKeys.length){
-    openMsDateModal(apt,newStatus,sel,newKeys);
+    openMsDateModal(newKeys,
+      (chosenDate)=>applyStatusChange(apt,newStatus,sel,chosenDate),
+      ()=>{ sel.value=apt.status; } // cancelled — revert select, don't change anything
+    );
   }else{
     applyStatusChange(apt,newStatus,sel);
   }
@@ -2306,31 +2335,6 @@ function applyStatusChange(apt,newStatus,sel,dateOverride){
   sel.style.setProperty('--pill-c','var(--status-'+newStatus+')');
   toast(`${apt.patient_name} → ${STATUS_PLAIN[newStatus]} ✅`,'success');
   renderStatusTabs();renderList();updateStats();renderTodoPanel();
-}
-let msDatePending=null;
-function openMsDateModal(apt,newStatus,sel,newKeys){
-  msDatePending={apt,newStatus,sel};
-  const label=newKeys.map(k=>MILESTONE_LABELS[k]||k).join(' + ');
-  document.getElementById('msDateLabel').textContent=`วันที่ทำ "${label}" สำเร็จ`;
-  document.getElementById('msDateInput').value=todayStr();
-  document.getElementById('msDateOverlay').classList.add('open');
-}
-function closeMsDateModal(){
-  // ปิดโดยไม่บันทึก — ให้ select กลับไปค่าเดิม (ยังไม่เปลี่ยนสถานะ)
-  if(msDatePending&&msDatePending.sel){
-    msDatePending.sel.value=msDatePending.apt.status;
-  }
-  msDatePending=null;
-  document.getElementById('msDateOverlay').classList.remove('open');
-}
-function confirmMsDateModal(){
-  if(!msDatePending)return;
-  const chosen=document.getElementById('msDateInput').value;
-  if(!chosen){toast('กรุณาเลือกวันที่','error');return;}
-  const {apt,newStatus,sel}=msDatePending;
-  applyStatusChange(apt,newStatus,sel,chosen);
-  msDatePending=null;
-  document.getElementById('msDateOverlay').classList.remove('open');
 }
 
 // ─── Calendar ─────────────────────────────────────────
@@ -2615,6 +2619,25 @@ function saveApt(){
   // brand-new appointments are tagged with the currently signed-in user.
   const existingApt=editingId?allApts.find(a=>a.id===editingId):null;
   const ownerId=existingApt?existingApt.owner_id:(currentUser?currentUser.id:null);
+  const formMilestones={
+    msAppointment:document.getElementById('fMsAppointment').checked,
+    msScanDone:document.getElementById('fMsScanDone').checked,
+    msCommence:document.getElementById('fMsCommence').checked,
+  };
+  // ถ้ามีขั้น KPI ไหน "เพิ่งถูกติ๊กใหม่" (เดิมยังไม่เคยติ๊ก) ในฟอร์มนี้ ให้เด้งป็อปอัพถาม
+  // วันที่ทำสำเร็จจริงก่อน (ค่าเริ่มต้น = วันนี้ แก้ย้อนหลังได้) แล้วค่อยบันทึกจริง
+  const prevMilestonesCheck=(existingApt&&existingApt.milestones)||{};
+  const newKeys=MILESTONE_ORDER.filter(k=>formMilestones[k]&&!prevMilestonesCheck[k]);
+  if(newKeys.length){
+    openMsDateModal(newKeys,
+      (chosenDate)=>finalizeSaveApt(name,date,time,existingApt,ownerId,formMilestones,chosenDate),
+      null // ยกเลิก — ปล่อยฟอร์มค้างไว้เหมือนเดิม ไม่บันทึกอะไร
+    );
+  }else{
+    finalizeSaveApt(name,date,time,existingApt,ownerId,formMilestones,null);
+  }
+}
+function finalizeSaveApt(name,date,time,existingApt,ownerId,formMilestones,newMilestoneDate){
   const p={
     id:editingId||genId(),owner_id:ownerId,patient_name:name,patient_id:null,date,
     time:time+':00',procedure_type:document.getElementById('fProc').value,
@@ -2630,21 +2653,17 @@ function saveApt(){
     // The checkboxes are the source of truth here (auto-ticked cumulatively as the
     // status dropdown changes, but staff can manually correct a wrong one) — this
     // lets a mistaken milestone be un-counted without touching raw data.
-    milestones:{
-      msAppointment:document.getElementById('fMsAppointment').checked,
-      msScanDone:document.getElementById('fMsScanDone').checked,
-      msCommence:document.getElementById('fMsCommence').checked,
-    },
+    milestones:formMilestones,
   };
   // milestone_dates เก็บ "วันที่ติ๊กสำเร็จจริง" ของแต่ละขั้น แยกจากวันนัดหมาย (date)
-  // — ใหม่ที่เพิ่งติ๊ก (เดิม false → ตอนนี้ true) จะประทับวันที่วันนี้ ส่วนที่ติ๊กอยู่แล้ว
-  // คงวันเดิมไว้ไม่เปลี่ยน และถ้าถูกติ๊กออก (true → false) จะล้างวันที่ทิ้งไป
+  // — ใหม่ที่เพิ่งติ๊ก (เดิม false → ตอนนี้ true) ใช้วันที่ที่เลือกจากป็อปอัพ (newMilestoneDate)
+  // ส่วนที่ติ๊กอยู่แล้วคงวันเดิมไว้ไม่เปลี่ยน และถ้าถูกติ๊กออก (true → false) จะล้างวันที่ทิ้งไป
   const prevMilestones=(existingApt&&existingApt.milestones)||{};
   const prevMilestoneDates=(existingApt&&existingApt.milestone_dates)||{};
   const milestoneDates={};
   MILESTONE_ORDER.forEach(key=>{
     if(p.milestones[key]){
-      milestoneDates[key]=prevMilestones[key]?(prevMilestoneDates[key]||todayStr()):todayStr();
+      milestoneDates[key]=prevMilestones[key]?(prevMilestoneDates[key]||todayStr()):(newMilestoneDate||todayStr());
     }else{
       milestoneDates[key]=null;
     }
