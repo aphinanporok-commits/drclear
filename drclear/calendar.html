@@ -696,8 +696,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <div class="settings-card">
       <div class="settings-card-head" onclick="toggleSettingsCard('kpi')">
         <div>
-          <div class="settings-card-title">เป้าหมาย KPI</div>
-          <div class="settings-card-desc">ตั้งเป้าจำนวนลูกค้าในแต่ละขั้น ระบบจะโชว์ความคืบหน้าเทียบเป้าที่การ์ด KPI หน้าปฏิทิน</div>
+          <div class="settings-card-title">เป้าหมาย KPI (ของฉัน)</div>
+          <div class="settings-card-desc">ตั้งเป้าจำนวนลูกค้าในแต่ละขั้นของตัวเอง — แต่ละคนตั้งแยกกัน ไม่ปนกับเพื่อนร่วมงาน ระบบจะโชว์ความคืบหน้าเทียบเป้าที่การ์ด KPI หน้าปฏิทิน</div>
         </div>
         <button class="settings-card-toggle" id="toggleKpi" title="ย่อ/ขยาย">▾</button>
       </div>
@@ -1767,7 +1767,6 @@ async function pushSettingsToDB(){
       quick_links:quickLinks,
       status_label_overrides:loadStatusLabelOverrides(),
       proc_label_overrides:loadProcLabelOverrides(),
-      kpi_targets:loadKpiTargets(),
     };
     // Retry loop: if the DB schema is missing a column this app version expects
     // (e.g. a migration hasn't been run yet), strip that one column and retry —
@@ -1822,9 +1821,6 @@ async function pullFromSupabaseOnLoad(){
           if(v&&PROC_ORDER_DEFAULT.includes(k)){PROC_LABELS[k]=v;}
         });
       }
-      if(settingsRow.kpi_targets&&typeof settingsRow.kpi_targets==='object'){
-        try{localStorage.setItem('kpiTargets',JSON.stringify(settingsRow.kpi_targets));}catch(e){}
-      }
       if(Array.isArray(settingsRow.custom_proc_types)){
         settingsRow.custom_proc_types.forEach(cp=>{
           if(cp&&cp.key&&cp.label){
@@ -1858,11 +1854,25 @@ async function pullFromSupabaseOnLoad(){
     // appointments (don't push fake/demo data into the real shared database).
     allApts=data||[];
     saveAppointmentsLocal();
+    await pullKpiTargetsFromDB();
     refreshStatusSelects();refreshProcSelects();renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
     populateColorInputs(loadStatusColors());
     populateProcColorInputs(loadProcColors());
+    populateKpiTargetInputs(loadKpiTargets());
     if(selectedDate)openDayPanel(selectedDate);
   }catch(e){console.error('pull from supabase failed',e);}
+}
+// เป้าหมาย KPI เป็นของแต่ละคน (ไม่ใช่ค่ากลางของคลินิก) — เก็บแยกตาราง kpi_targets
+// ผูกกับ owner_id ของแต่ละบัญชี ผ่าน RLS ให้เห็น/แก้ได้เฉพาะของตัวเอง
+async function pullKpiTargetsFromDB(){
+  if(!sb||!currentUser)return;
+  try{
+    const {data,error}=await sb.from('kpi_targets').select('targets').eq('owner_id',currentUser.id).maybeSingle();
+    if(error){console.error('kpi_targets fetch error',error);return;}
+    if(data&&data.targets&&typeof data.targets==='object'){
+      try{localStorage.setItem(kpiTargetsKey(),JSON.stringify(data.targets));}catch(e){}
+    }
+  }catch(e){console.error(e);}
 }
 const patients=[
   {id:'p1',name:'สมชาย เจริญสุข',phone:'081-234-5678'},
@@ -1976,10 +1986,15 @@ function updateStats(){
 }
 function cap(key){ return key.charAt(0).toUpperCase()+key.slice(1); }
 const KPI_TARGET_DEFAULT={msAppointment:0,msScanDone:0,msCommence:0};
+// เก็บเป้าหมาย KPI แยกตามผู้ใช้แต่ละคน (คีย์ localStorage ผูกกับ user id ของบัญชีที่ล็อกอินอยู่)
+// เพื่อไม่ให้ตัวเลขของพนักงานคนหนึ่งไปทับ/แสดงซ้ำกับอีกคนบนเครื่อง/เบราว์เซอร์เดียวกัน
+function kpiTargetsKey(){
+  return currentUser&&currentUser.id?('kpiTargets_'+currentUser.id):'kpiTargets_anon';
+}
 function loadKpiTargets(){
   let targets=Object.assign({},KPI_TARGET_DEFAULT);
   try{
-    const saved=localStorage.getItem('kpiTargets');
+    const saved=localStorage.getItem(kpiTargetsKey());
     if(saved) targets=Object.assign({},KPI_TARGET_DEFAULT,JSON.parse(saved));
   }catch(e){}
   return targets;
@@ -1990,6 +2005,13 @@ function populateKpiTargetInputs(targets){
     if(el) el.value=targets[key]?targets[key]:'';
   });
 }
+async function pushKpiTargetsToDB(targets){
+  if(!sb||!currentUser)return;
+  try{
+    const {error}=await sb.from('kpi_targets').upsert({owner_id:currentUser.id,targets},{onConflict:'owner_id'});
+    if(error)console.error('kpi_targets upsert error',error);
+  }catch(e){console.error(e);}
+}
 function saveKpiTargets(){
   const targets={};
   MILESTONE_ORDER.forEach(key=>{
@@ -1997,16 +2019,16 @@ function saveKpiTargets(){
     const v=el?parseInt(el.value,10):0;
     targets[key]=(v>0)?v:0;
   });
-  try{localStorage.setItem('kpiTargets',JSON.stringify(targets));}catch(e){}
+  try{localStorage.setItem(kpiTargetsKey(),JSON.stringify(targets));}catch(e){}
   updateStats();
-  pushSettingsToDB();
-  toast('บันทึกเป้าหมาย KPI เรียบร้อย ✅','success');
+  pushKpiTargetsToDB(targets);
+  toast('บันทึกเป้าหมาย KPI ของฉันเรียบร้อย ✅','success');
 }
 function resetKpiTargets(){
-  try{localStorage.removeItem('kpiTargets');}catch(e){}
+  try{localStorage.removeItem(kpiTargetsKey());}catch(e){}
   populateKpiTargetInputs(KPI_TARGET_DEFAULT);
   updateStats();
-  pushSettingsToDB();
+  pushKpiTargetsToDB(Object.assign({},KPI_TARGET_DEFAULT));
   toast('ล้างเป้าหมาย KPI แล้ว','info');
 }
 
