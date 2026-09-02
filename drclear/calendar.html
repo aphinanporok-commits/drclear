@@ -934,11 +934,20 @@ function seedMilestoneStatuses(){
 // Mark a milestone (and every earlier milestone in the funnel) as reached — reached
 // stages are never un-marked, so KPI counts stay cumulative even if the current
 // status later moves elsewhere.
+// เก็บ "วันที่ติ๊กสำเร็จจริง" แยกไว้ใน milestone_dates ด้วย (คนละอันกับวันนัดหมาย apt.date)
+// เพื่อให้ KPI รายเดือนนับจากวันที่ทำสำเร็จจริง ไม่ใช่วันที่ตั้งนัดไว้ตอนแรก
 function markMilestone(apt,statusKey){
   const idx=MILESTONE_ORDER.indexOf(statusKey);
   if(idx===-1)return;
   if(!apt.milestones||typeof apt.milestones!=='object')apt.milestones={};
-  for(let i=0;i<=idx;i++)apt.milestones[MILESTONE_ORDER[i]]=true;
+  if(!apt.milestone_dates||typeof apt.milestone_dates!=='object')apt.milestone_dates={};
+  for(let i=0;i<=idx;i++){
+    const key=MILESTONE_ORDER[i];
+    if(!apt.milestones[key]){
+      apt.milestones[key]=true;
+      apt.milestone_dates[key]=todayStr();
+    }
+  }
 }
 // ─── Custom statuses (persisted beyond the fixed 4) ───
 function loadCustomStatuses(){
@@ -1962,16 +1971,22 @@ function fmtDateShort(s){
 function groupBy(arr,fn){const m={};arr.forEach(a=>{const k=fn(a);(m[k]=m[k]||[]).push(a);});return m;}
 
 // ─── Stats ────────────────────────────────────────────
-// นับความคืบหน้า KPI เฉพาะนัดหมายของ "เดือนนี้" เท่านั้น (ไม่เอาของเดือนก่อนๆ มารวม)
-// เทียบจาก a.date (รูปแบบ YYYY-MM-DD) ว่าอยู่ในเดือน/ปีปัจจุบันไหม
+// นับความคืบหน้า KPI เฉพาะรายการที่ "ทำสถานะนั้นสำเร็จจริง" ในเดือนนี้เท่านั้น
+// (ไม่เอาของเดือนก่อนๆ มารวม) — เทียบจากวันที่ติ๊กสำเร็จจริง (milestone_dates) ของ
+// milestone นั้นๆ ไม่ใช่วันนัดหมาย (a.date) เพราะลูกค้าคนหนึ่งอาจตั้งนัดไว้เดือนหนึ่ง
+// แต่เพิ่งมา Scan Done/Commence สำเร็จอีกเดือนนึงก็ได้ — รายการเก่าที่ยังไม่มี
+// milestone_dates (บันทึกไว้ก่อนอัปเดตฟีเจอร์นี้) จะ fallback ไปใช้วันนัดหมายแทน
 function isInCurrentMonth(dateStr){
   return !!dateStr && dateStr.slice(0,7)===currentMonthKey();
 }
+function milestoneDate(a,key){
+  return (a.milestone_dates&&a.milestone_dates[key])||a.date;
+}
 function updateStats(){
   const counts={
-    msAppointment:allApts.filter(a=>a.milestones&&a.milestones.msAppointment&&isInCurrentMonth(a.date)).length,
-    msScanDone:allApts.filter(a=>a.milestones&&a.milestones.msScanDone&&isInCurrentMonth(a.date)).length,
-    msCommence:allApts.filter(a=>a.milestones&&a.milestones.msCommence&&isInCurrentMonth(a.date)).length,
+    msAppointment:allApts.filter(a=>a.milestones&&a.milestones.msAppointment&&isInCurrentMonth(milestoneDate(a,'msAppointment'))).length,
+    msScanDone:allApts.filter(a=>a.milestones&&a.milestones.msScanDone&&isInCurrentMonth(milestoneDate(a,'msScanDone'))).length,
+    msCommence:allApts.filter(a=>a.milestones&&a.milestones.msCommence&&isInCurrentMonth(milestoneDate(a,'msCommence'))).length,
   };
   const targets=loadKpiTargets();
   MILESTONE_ORDER.forEach(key=>{
@@ -2554,6 +2569,20 @@ function saveApt(){
       msCommence:document.getElementById('fMsCommence').checked,
     },
   };
+  // milestone_dates เก็บ "วันที่ติ๊กสำเร็จจริง" ของแต่ละขั้น แยกจากวันนัดหมาย (date)
+  // — ใหม่ที่เพิ่งติ๊ก (เดิม false → ตอนนี้ true) จะประทับวันที่วันนี้ ส่วนที่ติ๊กอยู่แล้ว
+  // คงวันเดิมไว้ไม่เปลี่ยน และถ้าถูกติ๊กออก (true → false) จะล้างวันที่ทิ้งไป
+  const prevMilestones=(existingApt&&existingApt.milestones)||{};
+  const prevMilestoneDates=(existingApt&&existingApt.milestone_dates)||{};
+  const milestoneDates={};
+  MILESTONE_ORDER.forEach(key=>{
+    if(p.milestones[key]){
+      milestoneDates[key]=prevMilestones[key]?(prevMilestoneDates[key]||todayStr()):todayStr();
+    }else{
+      milestoneDates[key]=null;
+    }
+  });
+  p.milestone_dates=milestoneDates;
   if(editingId){const idx=allApts.findIndex(a=>a.id===editingId);if(idx>-1)allApts[idx]=p;toast('แก้ไขนัดหมายเรียบร้อย ✅','success');}
   else{allApts.push(p);toast('เพิ่มนัดหมายเรียบร้อย ✅','success');}
   saveAppointments();
