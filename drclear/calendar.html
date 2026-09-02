@@ -389,6 +389,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .kpi-target-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
 .kpi-target-label{flex:1;font-size:13.5px;font-weight:600;color:var(--text);}
 .kpi-target-input{max-width:120px;text-align:right;}
+
+/* ── Staff access management (admin-only settings card) ── */
+.staff-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.staff-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;}
+.staff-row-email{flex:1;font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.staff-role-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;flex-shrink:0;}
+.staff-role-badge.admin{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary);}
+.staff-role-badge.staff{background:var(--cal-head-bg);color:var(--text-muted);}
+.staff-row-remove{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--danger);
+  border-radius:7px;padding:4px 9px;font-size:12px;font-weight:600;cursor:pointer;}
+.staff-row-remove:hover{background:color-mix(in srgb,var(--danger) 10%,transparent);}
+.staff-add-row{display:flex;gap:8px;align-items:center;}
+.staff-add-row input{flex:1;}
+.staff-add-row select{flex-shrink:0;width:110px;}
+.staff-empty{font-size:12.5px;color:var(--text-muted);padding:6px 2px;}
 .cal-card{background:var(--surface);border:1px solid var(--cal-border);border-radius:14px;
   overflow:hidden;box-shadow:var(--shadow);}
 
@@ -487,10 +502,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <div class="auth-logo">🦷</div>
     <div class="auth-title">Dr. Clear Aligner</div>
     <div class="auth-sub">ระบบประเมินฟันลูกค้า — เข้าสู่ระบบเพื่อดูข้อมูลของคุณ</div>
-    <button class="auth-google-btn" onclick="signInWithGoogle()">
+    <button class="auth-google-btn" id="authGoogleBtn" onclick="signInWithGoogle()">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.94v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.94A9 9 0 0 0 0 9c0 1.45.35 2.83.94 4.03l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .94 4.97l3.01 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       เข้าสู่ระบบด้วย Gmail
     </button>
+    <button class="auth-google-btn" id="authTryAnotherBtn" onclick="retryLogin()" style="display:none;">ลองอีเมลอื่น</button>
     <div class="auth-note" id="authNote"></div>
   </div>
 </div>
@@ -706,6 +722,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="settings-actions">
           <button class="btn-settings-save" onclick="saveKpiTargets()">💾 บันทึกเป้าหมาย</button>
           <button class="btn-settings-reset" onclick="resetKpiTargets()">↺ ล้างเป้าหมาย</button>
+        </div>
+      </div>
+    </div>
+    <div class="settings-card" id="cardStaff" style="display:none;">
+      <div class="settings-card-head" onclick="toggleSettingsCard('staff')">
+        <div>
+          <div class="settings-card-title">จัดการสิทธิ์ผู้ใช้งาน</div>
+          <div class="settings-card-desc">เฉพาะอีเมลที่อยู่ในรายชื่อนี้เท่านั้นที่เข้าใช้งานระบบได้ — แอดมินเห็นข้อมูลของทุกคน ส่วนพนักงานเห็นเฉพาะของตัวเอง</div>
+        </div>
+        <button class="settings-card-toggle" id="toggleStaff" title="ย่อ/ขยาย">▾</button>
+      </div>
+      <div class="settings-card-body" id="bodyStaff">
+        <div class="staff-list" id="staffList"><div class="staff-empty">กำลังโหลด...</div></div>
+        <div class="staff-add-row">
+          <input class="form-input" type="email" id="newStaffEmail" placeholder="อีเมล Gmail ของพนักงาน">
+          <select class="form-input" id="newStaffRole">
+            <option value="staff">พนักงาน</option>
+            <option value="admin">แอดมิน</option>
+          </select>
+          <button class="btn-settings-save" onclick="addStaffMember()">+ เพิ่ม</button>
         </div>
       </div>
     </div>
@@ -1568,7 +1604,11 @@ try{
 }catch(e){console.error('Supabase init failed',e);}
 
 // ─── Google sign-in (each staff member only sees their own leads/appointments) ───
+// Access is gated by the "staff_members" table: only emails listed there may use
+// the app at all, and their role ('admin' | 'staff') decides whether they see
+// everyone's data (enforced by Supabase RLS) or just their own.
 let currentUser=null;
+let isAdmin=false;
 function signInWithGoogle(){
   if(!sb){
     const note=document.getElementById('authNote');
@@ -1583,13 +1623,18 @@ function signInWithGoogle(){
 function signOut(){
   if(sb) sb.auth.signOut();
 }
-function showAuthGate(msg){
+function showAuthGate(msg,opts){
+  opts=opts||{};
   const gate=document.getElementById('authGate');
   const root=document.getElementById('appRoot');
   if(gate) gate.classList.add('open');
   if(root) root.style.display='none';
   const note=document.getElementById('authNote');
   if(note){note.textContent=msg||'';note.classList.toggle('error',!!msg);}
+  const googleBtn=document.getElementById('authGoogleBtn');
+  const tryAnotherBtn=document.getElementById('authTryAnotherBtn');
+  if(googleBtn) googleBtn.style.display=opts.blocked?'none':'';
+  if(tryAnotherBtn) tryAnotherBtn.style.display=opts.blocked?'':'none';
 }
 function showAppAfterAuth(user){
   currentUser=user;
@@ -1601,11 +1646,20 @@ function showAppAfterAuth(user){
   const displayName=meta.full_name||meta.name||user.email||'';
   const nameEl=document.getElementById('navbarUserName');
   const avatarEl=document.getElementById('navbarUserAvatar');
-  if(nameEl) nameEl.textContent=displayName;
+  if(nameEl) nameEl.textContent=displayName+(isAdmin?' (แอดมิน)':'');
   if(avatarEl){
     if(meta.avatar_url){avatarEl.src=meta.avatar_url;avatarEl.style.display='';}
     else{avatarEl.style.display='none';}
   }
+}
+// Look the signed-in user's email up in staff_members. Returns 'admin' | 'staff' | null
+// (null = not on the allowlist at all).
+async function fetchStaffRole(email){
+  try{
+    const {data,error}=await sb.from('staff_members').select('role').eq('email',email).maybeSingle();
+    if(error){console.error('staff_members lookup failed',error);return null;}
+    return data?data.role:null;
+  }catch(e){console.error(e);return null;}
 }
 async function initAuth(){
   if(!sb){
@@ -1614,20 +1668,41 @@ async function initAuth(){
   }
   try{
     const {data:{session}}=await sb.auth.getSession();
-    if(session&&session.user){ showAppAfterAuth(session.user); afterLogin(); }
+    if(session&&session.user){ await handleSignedIn(session.user); }
     else{ showAuthGate(); }
   }catch(e){ console.error('auth init failed',e); showAuthGate('เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่'); }
   sb.auth.onAuthStateChange((event,session)=>{
     if(event==='SIGNED_IN'&&session&&session.user){
-      showAppAfterAuth(session.user);
-      afterLogin();
+      handleSignedIn(session.user);
     }else if(event==='SIGNED_OUT'){
       currentUser=null;
+      isAdmin=false;
       allApts=[];
       afterLoginDone=false;
-      showAuthGate();
+      if(!blockedMessageActive) showAuthGate();
     }
   });
+}
+let blockedMessageActive=false;
+function retryLogin(){
+  blockedMessageActive=false;
+  showAuthGate();
+}
+async function handleSignedIn(user){
+  const role=await fetchStaffRole(user.email);
+  if(!role){
+    // Signed into Google fine, but this email isn't on the clinic's allowlist —
+    // sign them back out immediately rather than leaving a half-open session.
+    // (signOut() fires a SIGNED_OUT event; blockedMessageActive tells that handler
+    // not to wipe this notice out from under us.)
+    blockedMessageActive=true;
+    showAuthGate(`บัญชี ${user.email} ยังไม่ได้รับสิทธิ์เข้าใช้งานระบบ กรุณาติดต่อแอดมินให้เพิ่มอีเมลนี้ก่อน`,{blocked:true});
+    if(sb) sb.auth.signOut();
+    return;
+  }
+  isAdmin=role==='admin';
+  showAppAfterAuth(user);
+  afterLogin();
 }
 let afterLoginDone=false;
 function afterLogin(){
@@ -1820,7 +1895,14 @@ function showPage(name){
   if(name==='list'){renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
   if(name==='links'){cancelAddLink();renderLinksPage();}
-  if(name==='settings'){populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());populateKpiTargetInputs(loadKpiTargets());applySettingsCardCollapse();}
+  if(name==='settings'){
+    populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());populateKpiTargetInputs(loadKpiTargets());applySettingsCardCollapse();
+    const staffCard=document.getElementById('cardStaff');
+    if(staffCard){
+      staffCard.style.display=isAdmin?'':'none';
+      if(isAdmin) loadStaffList();
+    }
+  }
 }
 function loadSettingsCollapseState(){
   try{return JSON.parse(localStorage.getItem('settingsCardCollapsed')||'{}');}catch(e){return {};}
@@ -1828,7 +1910,7 @@ function loadSettingsCollapseState(){
 function settingsCardSuffix(k){ return k.charAt(0).toUpperCase()+k.slice(1); }
 function applySettingsCardCollapse(){
   const state=loadSettingsCollapseState();
-  ['status','proc','kpi'].forEach(k=>{
+  ['status','proc','kpi','staff'].forEach(k=>{
     const body=document.getElementById('body'+settingsCardSuffix(k));
     const btn=document.getElementById('toggle'+settingsCardSuffix(k));
     if(!body||!btn)return;
@@ -1926,6 +2008,56 @@ function resetKpiTargets(){
   updateStats();
   pushSettingsToDB();
   toast('ล้างเป้าหมาย KPI แล้ว','info');
+}
+
+// ─── Staff access management (admin only — who can log in, and who's an admin) ───
+function escapeHtmlAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+async function loadStaffList(){
+  const box=document.getElementById('staffList');
+  if(!box||!sb)return;
+  box.innerHTML='<div class="staff-empty">กำลังโหลด...</div>';
+  try{
+    const {data,error}=await sb.from('staff_members').select('id,email,role').order('created_at',{ascending:true});
+    if(error){console.error('load staff failed',error);box.innerHTML='<div class="staff-empty">โหลดรายชื่อไม่สำเร็จ</div>';return;}
+    if(!data||!data.length){box.innerHTML='<div class="staff-empty">ยังไม่มีรายชื่อ</div>';return;}
+    box.innerHTML=data.map(s=>`
+      <div class="staff-row">
+        <div class="staff-row-email">${escapeHtml(s.email)}</div>
+        <div class="staff-role-badge ${s.role}">${s.role==='admin'?'แอดมิน':'พนักงาน'}</div>
+        <button class="staff-row-remove" onclick="removeStaffMember('${s.id}','${escapeHtmlAttr(s.email)}')">ลบ</button>
+      </div>`).join('');
+  }catch(e){console.error(e);box.innerHTML='<div class="staff-empty">โหลดรายชื่อไม่สำเร็จ</div>';}
+}
+async function addStaffMember(){
+  const emailEl=document.getElementById('newStaffEmail');
+  const roleEl=document.getElementById('newStaffRole');
+  const email=(emailEl.value||'').trim().toLowerCase();
+  const role=roleEl.value;
+  if(!email||!email.includes('@')){toast('กรุณากรอกอีเมลให้ถูกต้อง','error');return;}
+  if(!sb){toast('เชื่อมต่อฐานข้อมูลไม่ได้','error');return;}
+  try{
+    const {error}=await sb.from('staff_members').insert({email,role});
+    if(error){
+      console.error('add staff failed',error);
+      if(String(error.message||'').includes('duplicate')) toast('อีเมลนี้อยู่ในรายชื่อแล้ว','error');
+      else toast('เพิ่มไม่สำเร็จ','error');
+      return;
+    }
+    emailEl.value='';
+    toast(`เพิ่ม ${email} เรียบร้อย ✅`,'success');
+    loadStaffList();
+  }catch(e){console.error(e);toast('เพิ่มไม่สำเร็จ','error');}
+}
+async function removeStaffMember(id,email){
+  if(currentUser&&email===currentUser.email){toast('ลบสิทธิ์ของตัวเองไม่ได้','error');return;}
+  if(!confirm(`ลบสิทธิ์การเข้าใช้งานของ ${email} ใช่ไหม?`))return;
+  if(!sb){toast('เชื่อมต่อฐานข้อมูลไม่ได้','error');return;}
+  try{
+    const {error}=await sb.from('staff_members').delete().eq('id',id);
+    if(error){console.error('remove staff failed',error);toast('ลบไม่สำเร็จ','error');return;}
+    toast(`ลบสิทธิ์ของ ${email} แล้ว`,'info');
+    loadStaffList();
+  }catch(e){console.error(e);toast('ลบไม่สำเร็จ','error');}
 }
 
 // ─── Status tabs ──────────────────────────────────────
