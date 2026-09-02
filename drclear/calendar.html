@@ -702,6 +702,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <button class="settings-card-toggle" id="toggleKpi" title="ย่อ/ขยาย">▾</button>
       </div>
       <div class="settings-card-body" id="bodyKpi">
+        <div class="kpi-target-month-label" id="kpiTargetMonthLabel" style="font-size:13px;color:var(--text-muted,#888);margin-bottom:8px;"></div>
         <div class="kpi-target-rows">
           <div class="kpi-target-row">
             <span class="kpi-target-dot" style="background:var(--status-msAppointment)"></span>
@@ -1862,12 +1863,12 @@ async function pullFromSupabaseOnLoad(){
     if(selectedDate)openDayPanel(selectedDate);
   }catch(e){console.error('pull from supabase failed',e);}
 }
-// เป้าหมาย KPI เป็นของแต่ละคน (ไม่ใช่ค่ากลางของคลินิก) — เก็บแยกตาราง kpi_targets
-// ผูกกับ owner_id ของแต่ละบัญชี ผ่าน RLS ให้เห็น/แก้ได้เฉพาะของตัวเอง
+// เป้าหมาย KPI เป็นของแต่ละคน "และ" แยกตามเดือน (ไม่ใช่ค่ากลางของคลินิก ไม่ใช่ตัวเลขสะสมข้ามเดือน)
+// เก็บแยกตาราง kpi_targets ผูกกับ owner_id+month ของแต่ละบัญชี ผ่าน RLS ให้เห็น/แก้ได้เฉพาะของตัวเอง
 async function pullKpiTargetsFromDB(){
   if(!sb||!currentUser)return;
   try{
-    const {data,error}=await sb.from('kpi_targets').select('targets').eq('owner_id',currentUser.id).maybeSingle();
+    const {data,error}=await sb.from('kpi_targets').select('targets').eq('owner_id',currentUser.id).eq('month',currentMonthKey()).maybeSingle();
     if(error){console.error('kpi_targets fetch error',error);return;}
     if(data&&data.targets&&typeof data.targets==='object'){
       try{localStorage.setItem(kpiTargetsKey(),JSON.stringify(data.targets));}catch(e){}
@@ -1961,11 +1962,16 @@ function fmtDateShort(s){
 function groupBy(arr,fn){const m={};arr.forEach(a=>{const k=fn(a);(m[k]=m[k]||[]).push(a);});return m;}
 
 // ─── Stats ────────────────────────────────────────────
+// นับความคืบหน้า KPI เฉพาะนัดหมายของ "เดือนนี้" เท่านั้น (ไม่เอาของเดือนก่อนๆ มารวม)
+// เทียบจาก a.date (รูปแบบ YYYY-MM-DD) ว่าอยู่ในเดือน/ปีปัจจุบันไหม
+function isInCurrentMonth(dateStr){
+  return !!dateStr && dateStr.slice(0,7)===currentMonthKey();
+}
 function updateStats(){
   const counts={
-    msAppointment:allApts.filter(a=>a.milestones&&a.milestones.msAppointment).length,
-    msScanDone:allApts.filter(a=>a.milestones&&a.milestones.msScanDone).length,
-    msCommence:allApts.filter(a=>a.milestones&&a.milestones.msCommence).length,
+    msAppointment:allApts.filter(a=>a.milestones&&a.milestones.msAppointment&&isInCurrentMonth(a.date)).length,
+    msScanDone:allApts.filter(a=>a.milestones&&a.milestones.msScanDone&&isInCurrentMonth(a.date)).length,
+    msCommence:allApts.filter(a=>a.milestones&&a.milestones.msCommence&&isInCurrentMonth(a.date)).length,
   };
   const targets=loadKpiTargets();
   MILESTONE_ORDER.forEach(key=>{
@@ -1986,10 +1992,19 @@ function updateStats(){
 }
 function cap(key){ return key.charAt(0).toUpperCase()+key.slice(1); }
 const KPI_TARGET_DEFAULT={msAppointment:0,msScanDone:0,msCommence:0};
-// เก็บเป้าหมาย KPI แยกตามผู้ใช้แต่ละคน (คีย์ localStorage ผูกกับ user id ของบัญชีที่ล็อกอินอยู่)
-// เพื่อไม่ให้ตัวเลขของพนักงานคนหนึ่งไปทับ/แสดงซ้ำกับอีกคนบนเครื่อง/เบราว์เซอร์เดียวกัน
+// เป้าหมาย KPI แยกทั้งตามผู้ใช้แต่ละคน "และ" ตามเดือน — ขึ้นเดือนใหม่เป้าจะเริ่มที่ 0/ไม่ตั้งเป้า
+// โดยอัตโนมัติ ส่วนของเดือนก่อนๆ ยังเก็บไว้แยกกันในฐานข้อมูล ไม่ถูกลบและไม่ถูกเอามารวมกับเดือนนี้
+function currentMonthKey(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function thMonthYearLabel(monthKey){
+  const [y,m]=monthKey.split('-').map(Number);
+  return (TH_MONTHS[m-1]||'')+' '+(y+543);
+}
 function kpiTargetsKey(){
-  return currentUser&&currentUser.id?('kpiTargets_'+currentUser.id):'kpiTargets_anon';
+  const uid=currentUser&&currentUser.id?currentUser.id:'anon';
+  return 'kpiTargets_'+uid+'_'+currentMonthKey();
 }
 function loadKpiTargets(){
   let targets=Object.assign({},KPI_TARGET_DEFAULT);
@@ -2004,11 +2019,13 @@ function populateKpiTargetInputs(targets){
     const el=document.getElementById('target'+cap(key));
     if(el) el.value=targets[key]?targets[key]:'';
   });
+  const labelEl=document.getElementById('kpiTargetMonthLabel');
+  if(labelEl) labelEl.textContent='เป้าหมายของเดือน '+thMonthYearLabel(currentMonthKey())+' (ขึ้นเดือนใหม่จะเริ่มนับ 0 ให้อัตโนมัติ เดือนก่อนๆ ยังเก็บไว้แยกกัน)';
 }
 async function pushKpiTargetsToDB(targets){
   if(!sb||!currentUser)return;
   try{
-    const {error}=await sb.from('kpi_targets').upsert({owner_id:currentUser.id,targets},{onConflict:'owner_id'});
+    const {error}=await sb.from('kpi_targets').upsert({owner_id:currentUser.id,month:currentMonthKey(),targets},{onConflict:'owner_id,month'});
     if(error)console.error('kpi_targets upsert error',error);
   }catch(e){console.error(e);}
 }
