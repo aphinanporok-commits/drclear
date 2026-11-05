@@ -420,7 +420,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .stats-tile-sub{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
 .stats-month-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
 .stats-month-label{font-size:15px;font-weight:800;min-width:130px;text-align:center;}
-.stats-sum-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+.stats-sum-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px;}
 @media(max-width:900px){.stats-sum-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 .stats-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow-x:auto;}
 .stats-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
@@ -2275,7 +2275,6 @@ function updateStats(){
 
 // ─── สถิติ: สรุปวันนี้ + ตารางรายวันทั้งเดือน ───
 // คำนวณจากข้อมูลนัดหมายที่เก็บอยู่แล้ว จึงดูย้อนหลังได้ทุกเดือน
-//  - นัดหมาย = จำนวนนัดที่วันนัดตรงกับวันนั้น (ไม่นับที่ยกเลิก)
 //  - Appointment / Scan Done / Commence = จำนวนที่ติ๊กสำเร็จในวันนั้น (milestone_dates)
 //  - ยอดขาย = รวมราคาของนัดที่วันนัดตรงกับวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
 let statsMonthKey=null;
@@ -2314,7 +2313,6 @@ function renderStatsPage(){
   const today=todayStr();
   const money=v=>'฿'+Math.round(v).toLocaleString();
   const cols=[
-    {key:'apts',label:'นัดหมาย',color:'var(--primary)'},
     {key:'msAppointment',label:'Appointment',color:'var(--status-msAppointment)'},
     {key:'msScanDone',label:'Scan Done',color:'var(--status-msScanDone)'},
     {key:'msCommence',label:'Commence',color:'var(--status-msCommence)'},
