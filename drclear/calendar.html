@@ -376,10 +376,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
   text-overflow:ellipsis;white-space:nowrap;}
 .todo-item.todo-done .todo-item-name{text-decoration:line-through;color:var(--text-muted);}
 .todo-item.todo-followup{background:color-mix(in srgb,#8E44AD 8%,transparent);}
-.todo-item.todo-followup:hover{background:color-mix(in srgb,#8E44AD 15%,transparent);}
-.todo-late{font-size:10.5px;font-weight:700;color:#E74C3C;margin-top:1px;}
-.todo-due-today{font-size:10.5px;font-weight:700;color:#8E44AD;margin-top:1px;}
-.todo-empty{padding:14px 8px;font-size:12.5px;color:var(--text-muted);text-align:center;}
+.todo-item.todo-followup:hover{background:color-mix(in srgb,#8E44AD 15%,transparent);}.todo-empty{padding:14px 8px;font-size:12.5px;color:var(--text-muted);text-align:center;}
 
 /* ══════════ STAT CARDS ══════════ */
 .cal-page-inner{padding:22px 26px 40px;max-width:1360px;margin:0 auto;}
@@ -413,6 +410,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .staff-add-row input{flex:1;}
 .staff-add-row select{flex-shrink:0;width:110px;}
 .staff-empty{font-size:12.5px;color:var(--text-muted);padding:6px 2px;}
+/* ══════════ SHORT-TERM KPI ══════════ */
+.settings-wrap.terms-wrap{max-width:1100px;width:100%;}
+.terms-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+@media(max-width:900px){.terms-grid{grid-template-columns:1fr;}}
+.term-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;}
+.term-card.current{border:2px solid var(--primary);box-shadow:0 4px 18px color-mix(in srgb,var(--primary) 18%,transparent);}
+.term-card.future{opacity:.6;}
+.term-head{display:flex;align-items:center;justify-content:space-between;gap:6px 8px;margin-bottom:2px;flex-wrap:wrap;}
+.term-name{font-size:15px;font-weight:800;white-space:nowrap;}
+.term-row-label{white-space:nowrap;}
+.term-badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.term-badge.now{background:var(--primary);color:#fff;}
+.term-badge.past{background:var(--border);color:var(--text-muted);}
+.term-badge.future{background:transparent;border:1px solid var(--border);color:var(--text-muted);}
+.term-range{font-size:12px;color:var(--text-muted);margin-bottom:12px;}
+.term-row{margin-bottom:12px;}
+.term-row:last-child{margin-bottom:0;}
+.term-row-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:13px;}
+.term-row-label{font-weight:700;display:flex;align-items:center;gap:6px;}
+.term-row-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.term-row-val{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.term-row-val span{font-weight:600;color:var(--text-muted);}
+.term-row-bar{margin-top:5px;height:6px;border-radius:3px;background:var(--border);overflow:hidden;}
+.term-row-bar>div{height:100%;border-radius:3px;transition:width .25s;}
+.term-row-note{font-size:11px;font-weight:700;margin-top:3px;}
+.term-row-note.ok{color:#27AE60;}.term-row-note.short{color:#E74C3C;}.term-row-note.muted{color:var(--text-muted);font-weight:600;}
+.terms-hint{font-size:12.5px;color:var(--text-muted);margin-top:14px;}
 .pkg-add-row .pkg-price-input{flex:0 0 130px;}
 .pkg-row-price{flex-shrink:0;font-size:13px;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;}
 .pkg-row-btn{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text-muted);
@@ -540,6 +564,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
   <div class="navbar-nav">
     <button class="nav-btn" id="nav-list"     onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="nav-btn" id="nav-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
+    <button class="nav-btn" id="nav-terms"    onclick="showPage('terms')">🎯 ชอตเทอม</button>
     <button class="nav-btn" id="nav-links"    onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="nav-btn" id="nav-settings"  onclick="showPage('settings')">⚙️ ตั้งค่า</button>
   </div>
@@ -555,6 +580,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <div class="sidebar-heading">เมนูหลัก</div>
     <button class="side-nav-item" id="side-list" onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="side-nav-item" id="side-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
+    <button class="side-nav-item" id="side-terms" onclick="showPage('terms')">🎯 ชอตเทอม</button>
     <button class="side-nav-item" id="side-links" onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="side-nav-item" id="side-settings" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
     <div class="sidebar-heading" style="margin-top:20px;">✅ งานวันนี้</div>
@@ -634,6 +660,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
       </div>
       <div class="cal-grid" id="calGrid"></div>
     </div>
+  </div>
+</div>
+
+<!-- ══════════ SHORT-TERM KPI PAGE ══════════ -->
+<div class="page" id="page-terms">
+  <div class="settings-wrap terms-wrap">
+    <div class="settings-title">ชอตเทอม KPI</div>
+    <div class="settings-subtitle" id="termsSubtitle">แบ่งเป้าหมายของเดือนเป็น 3 ช่วง ช่วงละ 10 วัน (เป้าแต่ละช่วง = เป้าทั้งเดือน ÷ 3)</div>
+    <div id="termsContainer"></div>
   </div>
 </div>
 
@@ -2073,6 +2108,7 @@ function showPage(name){
   if(name==='list'){renderStatusTabs();renderList();}
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
   if(name==='links'){cancelAddLink();renderLinksPage();}
+  if(name==='terms'){renderTermsPage();}
   if(name==='settings'){
     populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());populateKpiTargetInputs(loadKpiTargets());applySettingsCardCollapse();
     cancelEditPkg();renderPkgList();
@@ -2183,8 +2219,78 @@ function updateStats(){
       lbl.textContent='';wrap.style.display='none';
     }
   }
+  const termsPage=document.getElementById('page-terms');
+  if(termsPage&&termsPage.classList.contains('active'))renderTermsPage();
 }
 function cap(key){ return key.charAt(0).toUpperCase()+key.slice(1); }
+
+// ─── ชอตเทอม: แบ่งเดือนเป็น 3 ช่วง (1–10, 11–20, 21–สิ้นเดือน) เป้าแต่ละช่วง = เป้าทั้งเดือน ÷ 3 ───
+// นับแบบเดียวกับการ์ด KPI: ขั้น Appointment/Scan Done/Commence ใช้วันที่ติ๊กสำเร็จจริง
+// ส่วนยอดขายใช้วันนัด (ไม่นับที่ยกเลิก)
+function renderTermsPage(){
+  const box=document.getElementById('termsContainer');
+  if(!box)return;
+  const mk=currentMonthKey();
+  const [y,m]=mk.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const today=todayStr();
+  const terms=[
+    {name:'ชอตเทอม 1',from:1,to:10},
+    {name:'ชอตเทอม 2',from:11,to:20},
+    {name:'ชอตเทอม 3',from:21,to:lastDay},
+  ].map(t=>Object.assign(t,{start:ds(y,m-1,t.from),end:ds(y,m-1,t.to)}));
+  const targets=loadKpiTargets();
+  const inRange=(d,t)=>!!d&&String(d).slice(0,10)>=t.start&&String(d).slice(0,10)<=t.end;
+  const metrics=[
+    {key:'msAppointment',label:'Appointment',color:'var(--status-msAppointment)',money:false},
+    {key:'msScanDone',label:'Scan Done',color:'var(--status-msScanDone)',money:false},
+    {key:'msCommence',label:'Commence',color:'var(--status-msCommence)',money:false},
+    {key:'revenue',label:'ยอดขาย',color:'#E67E22',money:true},
+  ];
+  const valueOf=(metric,t)=>{
+    if(metric.key==='revenue'){
+      return allApts.filter(a=>a.status!=='cancelled'&&inRange(a.date,t)).reduce((s,a)=>s+(Number(a.price)||0),0);
+    }
+    return allApts.filter(a=>a.milestones&&a.milestones[metric.key]&&inRange(milestoneDate(a,metric.key),t)).length;
+  };
+  const fmt=(v,money)=>money?'฿'+Math.round(v).toLocaleString():String(v);
+  const anyTarget=metrics.some(mt=>targets[mt.key]>0);
+  const cards=terms.map(t=>{
+    const state=today<t.start?'future':today>t.end?'past':'now';
+    const daysLeft=state==='now'?Math.round((new Date(t.end+'T00:00:00')-new Date(today+'T00:00:00'))/86400000)+1:0;
+    const badge=state==='now'?`<span class="term-badge now">ช่วงนี้ · เหลือ ${daysLeft} วัน</span>`
+      :state==='past'?'<span class="term-badge past">จบแล้ว</span>':'<span class="term-badge future">ยังไม่ถึง</span>';
+    const rows=metrics.map(mt=>{
+      const v=valueOf(mt,t);
+      const monthly=targets[mt.key]||0;
+      const tgt=monthly>0?(mt.money?Math.round(monthly/3):Math.ceil(monthly/3)):0;
+      const pct=tgt>0?Math.min(100,Math.round(v/tgt*100)):0;
+      let note='';
+      if(tgt>0){
+        if(v>=tgt) note=`<div class="term-row-note ok">✔ ถึงเป้าแล้ว</div>`;
+        else if(state==='future') note=`<div class="term-row-note muted">เป้า ${fmt(tgt,mt.money)}</div>`;
+        else note=`<div class="term-row-note short">${state==='past'?'ขาด':'ยังขาดอีก'} ${fmt(tgt-v,mt.money)}</div>`;
+      }
+      return `<div class="term-row">
+        <div class="term-row-top">
+          <span class="term-row-label"><span class="term-row-dot" style="background:${mt.color}"></span>${mt.label}</span>
+          <span class="term-row-val">${fmt(v,mt.money)}${tgt>0?` <span>/ ${fmt(tgt,mt.money)}</span>`:''}</span>
+        </div>
+        ${tgt>0?`<div class="term-row-bar"><div style="width:${pct}%;background:${mt.color}"></div></div>`:''}
+        ${note}
+      </div>`;
+    }).join('');
+    return `<div class="term-card ${state==='now'?'current':state==='future'?'future':''}">
+      <div class="term-head"><span class="term-name">${t.name}</span>${badge}</div>
+      <div class="term-range">${fmtDateShort(t.start)} – ${fmtDateShort(t.end)}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+  document.getElementById('termsSubtitle').textContent=
+    `เดือน ${thMonthYearLabel(mk)} · แบ่งเป้าหมายเป็น 3 ช่วง ช่วงละ 10 วัน (เป้าแต่ละช่วง = เป้าทั้งเดือน ÷ 3)`;
+  box.innerHTML=`<div class="terms-grid">${cards}</div>`+
+    (anyTarget?'':`<div class="terms-hint">ยังไม่ได้ตั้งเป้าหมายของเดือนนี้ — ไปที่ ⚙️ ตั้งค่า → เป้าหมาย KPI (ของฉัน) เพื่อให้ระบบแบ่งเป้าเป็น 3 ช่วงให้</div>`);
+}
 const KPI_TARGET_DEFAULT={msAppointment:0,msScanDone:0,msCommence:0,revenue:0};
 const KPI_TARGET_KEYS=MILESTONE_ORDER.concat(['revenue']);
 // เป้าหมาย KPI แยกทั้งตามผู้ใช้แต่ละคน "และ" ตามเดือน — ขึ้นเดือนใหม่เป้าจะเริ่มที่ 0/ไม่ตั้งเป้า
@@ -2504,12 +2610,10 @@ function renderTodoPanel(){
   if(!box)return;
   const td=todayStr();
   const todays=allApts.filter(a=>a.date===td).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  // ต้องติดต่อ = วันที่ติดต่อถึงกำหนดวันนี้ หรือเลยกำหนดมาแล้ว (ค้างจากวันก่อน) — ยังโชว์จนกว่าจะเลื่อนวันติดต่อใหม่
-  // ไม่รวมรายการที่ยกเลิก เรียงจากค้างนานสุดก่อน
+  // ต้องติดต่อ = เฉพาะรายการที่ตั้งวันติดต่อไว้ตรงกับวันนี้เท่านั้น (ไม่เอาที่เลยกำหนดแล้ว) ไม่รวมที่ยกเลิก
   const followups=allApts
-    .filter(a=>a.followup_date&&String(a.followup_date).slice(0,10)<=td&&a.status!=='cancelled')
-    .sort((a,b)=>String(a.followup_date).localeCompare(String(b.followup_date)));
-  const daysLate=f=>Math.round((new Date(td+'T00:00:00')-new Date(String(f).slice(0,10)+'T00:00:00'))/86400000);
+    .filter(a=>a.followup_date&&String(a.followup_date).slice(0,10)===td&&a.status!=='cancelled')
+    .sort((a,b)=>(a.patient_name||'').localeCompare(b.patient_name||''));
   let html='';
   if(!todays.length&&!followups.length){
     html=`<div class="todo-empty">ไม่มีงานวันนี้ 🎉</div>`;
@@ -2530,16 +2634,10 @@ function renderTodoPanel(){
     }
     if(followups.length){
       html+=`<div class="todo-sub-label">📞 ต้องติดต่อวันนี้ (${followups.length})</div>`;
-      html+=followups.map(a=>{
-        const late=daysLate(a.followup_date);
-        const badge=late>0
-          ?`<div class="todo-late">เลยมา ${late} วัน · ${fmtDateShort(String(a.followup_date).slice(0,10))}</div>`
-          :`<div class="todo-due-today">วันนี้</div>`;
-        return `<div class="todo-item todo-followup" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
+      html+=followups.map(a=>`<div class="todo-item todo-followup" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
           <span class="todo-item-icon">📞</span>
-          <div class="todo-item-body"><div class="todo-item-name">${a.patient_name}</div>${badge}</div>
-        </div>`;
-      }).join('');
+          <div class="todo-item-body"><div class="todo-item-name">${a.patient_name}</div></div>
+        </div>`).join('');
     }
   }
   box.innerHTML=html;
