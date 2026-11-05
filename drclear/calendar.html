@@ -341,6 +341,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none;}
 .toast{padding:11px 16px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);animation:slideIn .3s ease;}
 .toast.success{background:#27AE60;color:#fff;}.toast.error{background:#E74C3C;color:#fff;}.toast.info{background:var(--primary);color:#fff;}
+.toast-undo{display:flex;align-items:center;gap:12px;pointer-events:auto;}
+.toast-undo button{background:#fff;color:var(--primary);border:none;border-radius:6px;padding:5px 10px;
+  font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);}
+.toast-undo button:hover{background:#EAF3FB;}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
 /* ══════════ APP SHELL / SIDEBAR ══════════ */
@@ -2692,21 +2696,37 @@ function deleteApt(){
   if(selectedDate) openDayPanel(selectedDate);
   if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
 }
-// ลบนัดหมายจากปุ่ม 🗑️ ในแถวรายการ (ถามยืนยันก่อน)
-function confirmDeleteApt(id){
-  const apt=allApts.find(a=>a.id===id);
-  if(!apt)return;
-  const label=`${apt.patient_name||'-'}${apt.date?' · '+fmtDateShort(apt.date):''}${apt.time?' '+apt.time.slice(0,5):''}`;
-  if(!confirm(`ต้องการลบนัดหมายนี้ใช่ไหม?\n\n${label}\n\nลบแล้วกู้คืนไม่ได้`))return;
-  allApts=allApts.filter(a=>a.id!==id);
-  saveAppointmentsLocal();
-  deleteAppointmentFromDB(id);
-  toast('ลบนัดหมายแล้ว','info');
+// ลบนัดหมายจากปุ่ม 🗑️ ในแถวรายการ — ลบทันทีไม่ต้องถาม แต่มีปุ่ม "เลิกทำ" ให้กู้คืนได้ในไม่กี่วินาที
+function refreshAfterAptChange(){
   renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate) openDayPanel(selectedDate);
   if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
 }
-
+function confirmDeleteApt(id){
+  const idx=allApts.findIndex(a=>a.id===id);
+  if(idx<0)return;
+  const removed=allApts[idx];
+  allApts=allApts.filter(a=>a.id!==id);
+  saveAppointmentsLocal();
+  deleteAppointmentFromDB(id);
+  refreshAfterAptChange();
+  toastUndo(`ลบ ${removed.patient_name||'นัดหมาย'} แล้ว`,()=>{
+    if(allApts.some(a=>a.id===id))return;
+    allApts.splice(Math.min(idx,allApts.length),0,removed);
+    saveAppointments(); // upsert กลับเข้าฐานข้อมูล
+    refreshAfterAptChange();
+    toast('กู้คืนนัดหมายแล้ว ✅','success');
+  });
+}
+function toastUndo(msg,onUndo){
+  const wrap=document.getElementById('toastWrap');
+  const el=document.createElement('div');el.className='toast info toast-undo';
+  const span=document.createElement('span');span.textContent=msg;
+  const btn=document.createElement('button');btn.textContent='↩️ เลิกทำ';
+  btn.onclick=()=>{el.remove();onUndo();};
+  el.append(span,btn);wrap.appendChild(el);
+  setTimeout(()=>el.remove(),6000);
+}
 // ─── Autocomplete ─────────────────────────────────────
 function searchPat(q){
   const box=document.getElementById('patSuggest');
