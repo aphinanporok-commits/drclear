@@ -255,6 +255,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .apt-card-edit{background:none;border:1px solid var(--border);color:var(--text-muted);
   border-radius:6px;padding:4px 9px;font-size:11.5px;cursor:pointer;font-family:var(--font);}
 .apt-card-edit:hover{border-color:var(--primary);color:var(--primary);}
+.apt-card-del{background:none;border:1px solid var(--border);color:var(--text-muted);
+  border-radius:6px;padding:4px 8px;font-size:11.5px;cursor:pointer;font-family:var(--font);}
+.apt-card-del:hover{border-color:#E74C3C;background:#FDECEA;color:#E74C3C;}
 .list-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;
   flex-wrap:wrap;padding:14px 2px 4px;}
 .page-info{font-size:12.5px;color:var(--text-muted);}
@@ -2272,6 +2275,7 @@ function aptCard(apt,showDate){
         </select>
       </div>
       <button class="apt-card-edit" onclick='openModal(null,${JSON.stringify(apt).replace(/'/g,"&#39;")})'>✏️ แก้ไข</button>
+      <button class="apt-card-del" title="ลบนัดหมายนี้" onclick="event.stopPropagation();confirmDeleteApt('${apt.id}')">🗑️</button>
     </div>
   </div>`;
 }
@@ -2685,6 +2689,20 @@ function deleteApt(){
   deleteAppointmentFromDB(deletedId);
   toast('ลบนัดหมายแล้ว','info');
   closeModal();renderCalendar();updateStats();renderTodoPanel();
+  if(selectedDate) openDayPanel(selectedDate);
+  if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
+}
+// ลบนัดหมายจากปุ่ม 🗑️ ในแถวรายการ (ถามยืนยันก่อน)
+function confirmDeleteApt(id){
+  const apt=allApts.find(a=>a.id===id);
+  if(!apt)return;
+  const label=`${apt.patient_name||'-'}${apt.date?' · '+fmtDateShort(apt.date):''}${apt.time?' '+apt.time.slice(0,5):''}`;
+  if(!confirm(`ต้องการลบนัดหมายนี้ใช่ไหม?\n\n${label}\n\nลบแล้วกู้คืนไม่ได้`))return;
+  allApts=allApts.filter(a=>a.id!==id);
+  saveAppointmentsLocal();
+  deleteAppointmentFromDB(id);
+  toast('ลบนัดหมายแล้ว','info');
+  renderCalendar();updateStats();renderTodoPanel();
   if(selectedDate) openDayPanel(selectedDate);
   if(document.getElementById('page-list').classList.contains('active')){renderStatusTabs();renderList();}
 }
