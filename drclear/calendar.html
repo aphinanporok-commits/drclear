@@ -607,6 +607,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="stat-card-value"><span id="statMsCommence">–</span><span class="stat-card-value-target" id="targetLabelMsCommence"></span></div>
         <div class="stat-card-bar" id="barWrapMsCommence" style="display:none"><div class="stat-card-bar-fill" id="barMsCommence" style="background:var(--status-msCommence)"></div></div>
       </div>
+      <div class="stat-card" style="border-left-color:#E67E22" title="รวมราคาของนัดหมายที่ถึงขั้น Commence ในเดือนนี้">
+        <div class="stat-card-label">ยอดขาย</div>
+        <div class="stat-card-value"><span id="statRevenue">–</span><span class="stat-card-value-target" id="targetLabelRevenue"></span></div>
+        <div class="stat-card-bar" id="barWrapRevenue" style="display:none"><div class="stat-card-bar-fill" id="barRevenue" style="background:#E67E22"></div></div>
+      </div>
     </div>
     <div class="cal-card">
       <div class="cal-topbar">
@@ -732,6 +737,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
             <span class="kpi-target-dot" style="background:var(--status-msCommence)"></span>
             <span class="kpi-target-label">Commence</span>
             <input type="number" min="0" class="form-input kpi-target-input" id="targetMsCommence" placeholder="ไม่ตั้งเป้า">
+          </div>
+          <div class="kpi-target-row">
+            <span class="kpi-target-dot" style="background:#E67E22"></span>
+            <span class="kpi-target-label">ยอดขาย (บาท)</span>
+            <input type="number" min="0" step="1000" class="form-input kpi-target-input" id="targetRevenue" placeholder="ไม่ตั้งเป้า">
           </div>
         </div>
         <div class="settings-actions">
@@ -2153,9 +2163,27 @@ function updateStats(){
       if(barWrapEl) barWrapEl.style.display='none';
     }
   });
+  // ยอดขาย = รวมราคาของรายการที่ถึงขั้น Commence ในเดือนนี้ (ใช้วันที่ติ๊ก Commence จริง เหมือน KPI ด้านบน)
+  const revenue=allApts
+    .filter(a=>a.milestones&&a.milestones.msCommence&&isInCurrentMonth(milestoneDate(a,'msCommence')))
+    .reduce((s,a)=>s+(Number(a.price)||0),0);
+  const revEl=document.getElementById('statRevenue');
+  if(revEl){
+    revEl.textContent='฿'+revenue.toLocaleString();
+    const rt=targets.revenue;
+    const lbl=document.getElementById('targetLabelRevenue'),wrap=document.getElementById('barWrapRevenue'),bar=document.getElementById('barRevenue');
+    if(rt&&rt>0){
+      lbl.textContent=' / ฿'+Number(rt).toLocaleString();
+      wrap.style.display='';
+      bar.style.width=Math.min(100,Math.round(revenue/rt*100))+'%';
+    }else{
+      lbl.textContent='';wrap.style.display='none';
+    }
+  }
 }
 function cap(key){ return key.charAt(0).toUpperCase()+key.slice(1); }
-const KPI_TARGET_DEFAULT={msAppointment:0,msScanDone:0,msCommence:0};
+const KPI_TARGET_DEFAULT={msAppointment:0,msScanDone:0,msCommence:0,revenue:0};
+const KPI_TARGET_KEYS=MILESTONE_ORDER.concat(['revenue']);
 // เป้าหมาย KPI แยกทั้งตามผู้ใช้แต่ละคน "และ" ตามเดือน — ขึ้นเดือนใหม่เป้าจะเริ่มที่ 0/ไม่ตั้งเป้า
 // โดยอัตโนมัติ ส่วนของเดือนก่อนๆ ยังเก็บไว้แยกกันในฐานข้อมูล ไม่ถูกลบและไม่ถูกเอามารวมกับเดือนนี้
 function currentMonthKey(){
@@ -2179,7 +2207,7 @@ function loadKpiTargets(){
   return targets;
 }
 function populateKpiTargetInputs(targets){
-  MILESTONE_ORDER.forEach(key=>{
+  KPI_TARGET_KEYS.forEach(key=>{
     const el=document.getElementById('target'+cap(key));
     if(el) el.value=targets[key]?targets[key]:'';
   });
@@ -2195,7 +2223,7 @@ async function pushKpiTargetsToDB(targets){
 }
 function saveKpiTargets(){
   const targets={};
-  MILESTONE_ORDER.forEach(key=>{
+  KPI_TARGET_KEYS.forEach(key=>{
     const el=document.getElementById('target'+cap(key));
     const v=el?parseInt(el.value,10):0;
     targets[key]=(v>0)?v:0;
