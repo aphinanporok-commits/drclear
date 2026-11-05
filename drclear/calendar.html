@@ -360,6 +360,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .side-nav-item.active{background:color-mix(in srgb,var(--primary) 14%,var(--surface));color:var(--primary);}
 .app-main{flex:1;overflow-y:auto;background:var(--bg);min-width:0;}
 @media(max-width:820px){.sidebar{display:none;}}
+/* จอใหญ่มีเมนูด้านซ้ายแล้ว จึงซ่อนปุ่มเมนูบนแถบด้านบน (จอมือถือยังแสดงเพราะไม่มีเมนูซ้าย) */
+@media(min-width:821px){.navbar-nav{display:none;}.navbar-user{margin-left:auto;border-left:none;}}
 
 /* ══════════ TODO PANEL (sidebar) ══════════ */
 .todo-panel{display:flex;flex-direction:column;gap:4px;padding:0 2px;}
