@@ -435,6 +435,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .term-row-bar{margin-top:5px;height:6px;border-radius:3px;background:var(--border);overflow:hidden;}
 .term-row-bar>div{height:100%;border-radius:3px;transition:width .25s;}
 .term-row-note{font-size:11px;font-weight:700;margin-top:3px;}
+.term-row-note.carry{color:#8E44AD;}
 .term-row-note.ok{color:#27AE60;}.term-row-note.short{color:#E74C3C;}.term-row-note.muted{color:var(--text-muted);font-weight:600;}
 .terms-hint{font-size:12.5px;color:var(--text-muted);margin-top:14px;}
 .pkg-add-row .pkg-price-input{flex:0 0 130px;}
@@ -2255,21 +2256,38 @@ function renderTermsPage(){
   };
   const fmt=(v,money)=>money?'฿'+Math.round(v).toLocaleString():String(v);
   const anyTarget=metrics.some(mt=>targets[mt.key]>0);
-  const cards=terms.map(t=>{
-    const state=today<t.start?'future':today>t.end?'past':'now';
+  terms.forEach(t=>{t.state=today<t.start?'future':today>t.end?'past':'now';});
+  // เป้าตั้งต้นแต่ละช่วง: แบ่งเป้าทั้งเดือนเป็น 3 ส่วนให้รวมกันเท่ากับเป้าพอดี (เศษไปไว้ช่วงหลัง เช่น 25 → 8/8/9)
+  // ยกยอด: ถ้าช่วงที่ "จบแล้ว" ทำไม่ถึงเป้า ส่วนที่ขาดจะถูกบวกเพิ่มเข้าไปในเป้าของช่วงถัดไป (ต่อเนื่องเป็นทอดๆ)
+  const plan={};
+  metrics.forEach(mt=>{
+    const monthly=targets[mt.key]||0;
+    const baseEach=Math.floor(monthly/3);
+    const bases=[baseEach,baseEach,monthly-baseEach*2];
+    let carry=0;
+    plan[mt.key]=terms.map((t,i)=>{
+      const v=valueOf(mt,t);
+      const carryIn=carry;
+      const tgt=monthly>0?bases[i]+carryIn:0;
+      carry=(t.state==='past'&&tgt>v)?tgt-v:0;
+      return {v,tgt,carryIn};
+    });
+  });
+  const cards=terms.map((t,ti)=>{
+    const state=t.state;
     const daysLeft=state==='now'?Math.round((new Date(t.end+'T00:00:00')-new Date(today+'T00:00:00'))/86400000)+1:0;
     const badge=state==='now'?`<span class="term-badge now">ช่วงนี้ · เหลือ ${daysLeft} วัน</span>`
       :state==='past'?'<span class="term-badge past">จบแล้ว</span>':'<span class="term-badge future">ยังไม่ถึง</span>';
     const rows=metrics.map(mt=>{
-      const v=valueOf(mt,t);
-      const monthly=targets[mt.key]||0;
-      const tgt=monthly>0?(mt.money?Math.round(monthly/3):Math.ceil(monthly/3)):0;
+      const {v,tgt,carryIn}=plan[mt.key][ti];
       const pct=tgt>0?Math.min(100,Math.round(v/tgt*100)):0;
       let note='';
+      if(tgt>0&&carryIn>0) note+=`<div class="term-row-note carry">↪ รวมยอดที่ขาดจากชอตเทอม ${ti} อีก ${fmt(carryIn,mt.money)}</div>`;
       if(tgt>0){
-        if(v>=tgt) note=`<div class="term-row-note ok">✔ ถึงเป้าแล้ว</div>`;
-        else if(state==='future') note=`<div class="term-row-note muted">เป้า ${fmt(tgt,mt.money)}</div>`;
-        else note=`<div class="term-row-note short">${state==='past'?'ขาด':'ยังขาดอีก'} ${fmt(tgt-v,mt.money)}</div>`;
+        if(v>=tgt) note+=`<div class="term-row-note ok">✔ ถึงเป้าแล้ว</div>`;
+        else if(state==='future') note+=`<div class="term-row-note muted">เป้า ${fmt(tgt,mt.money)} (ถ้าช่วงก่อนไม่ถึงเป้า จะบวกเพิ่ม)</div>`;
+        else if(state==='past') note+=`<div class="term-row-note short">ขาด ${fmt(tgt-v,mt.money)}${ti<2?` → ยกไปชอตเทอม ${ti+2}`:''}</div>`;
+        else note+=`<div class="term-row-note short">ยังขาดอีก ${fmt(tgt-v,mt.money)}</div>`;
       }
       return `<div class="term-row">
         <div class="term-row-top">
@@ -2287,7 +2305,7 @@ function renderTermsPage(){
     </div>`;
   }).join('');
   document.getElementById('termsSubtitle').textContent=
-    `เดือน ${thMonthYearLabel(mk)} · แบ่งเป้าหมายเป็น 3 ช่วง ช่วงละ 10 วัน (เป้าแต่ละช่วง = เป้าทั้งเดือน ÷ 3)`;
+    `เดือน ${thMonthYearLabel(mk)} · แบ่งเป้าหมายเป็น 3 ช่วง ช่วงละ 10 วัน (เป้าทั้งเดือน ÷ 3) — ช่วงไหนทำไม่ถึงเป้า ส่วนที่ขาดจะยกไปบวกในช่วงถัดไป`;
   box.innerHTML=`<div class="terms-grid">${cards}</div>`+
     (anyTarget?'':`<div class="terms-hint">ยังไม่ได้ตั้งเป้าหมายของเดือนนี้ — ไปที่ ⚙️ ตั้งค่า → เป้าหมาย KPI (ของฉัน) เพื่อให้ระบบแบ่งเป้าเป็น 3 ช่วงให้</div>`);
 }
