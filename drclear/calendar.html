@@ -411,6 +411,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .staff-add-row input{flex:1;}
 .staff-add-row select{flex-shrink:0;width:110px;}
 .staff-empty{font-size:12.5px;color:var(--text-muted);padding:6px 2px;}
+.pkg-add-row .pkg-price-input{flex:0 0 130px;}
+.pkg-row-price{flex-shrink:0;font-size:13px;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;}
+.pkg-row-btn{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text-muted);
+  border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;font-family:var(--font);}
+.pkg-row-btn:hover{border-color:var(--primary);color:var(--primary);}
+.pkg-row-btn.del:hover{border-color:var(--danger);color:var(--danger);}
+@media(max-width:600px){.pkg-add-row{flex-wrap:wrap;}.pkg-add-row .pkg-price-input{flex:1 1 120px;}}
 .cal-card{background:var(--surface);border:1px solid var(--cal-border);border-radius:14px;
   overflow:hidden;box-shadow:var(--shadow);}
 
@@ -733,6 +740,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         </div>
       </div>
     </div>
+    <div class="settings-card">
+      <div class="settings-card-head" onclick="toggleSettingsCard('pkg')">
+        <div>
+          <div class="settings-card-title">แพ็กเกจราคา</div>
+          <div class="settings-card-desc">ตั้งชื่อแพ็กเกจและราคาไว้ล่วงหน้า แล้วเลือกจากฟอร์มนัดหมาย ระบบจะใส่ราคาให้อัตโนมัติ (แก้ราคาในฟอร์มเองได้)</div>
+        </div>
+        <button class="settings-card-toggle" id="togglePkg" title="ย่อ/ขยาย">▾</button>
+      </div>
+      <div class="settings-card-body" id="bodyPkg">
+        <div class="staff-list" id="pkgList"></div>
+        <div class="staff-add-row pkg-add-row">
+          <input class="form-input" type="text" id="newPkgName" placeholder="ชื่อแพ็กเกจ เช่น Clear Aligner ฟันบน-ล่าง">
+          <input class="form-input pkg-price-input" type="number" min="0" id="newPkgPrice" placeholder="ราคา (บาท)" onkeydown="if(event.key==='Enter')savePkg()">
+          <button class="btn-settings-save" id="btnSavePkg" onclick="savePkg()">+ เพิ่ม</button>
+          <button class="btn-settings-reset" id="btnCancelPkg" style="display:none" onclick="cancelEditPkg()">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
     <div class="settings-card" id="cardStaff" style="display:none;">
       <div class="settings-card-head" onclick="toggleSettingsCard('staff')">
         <div>
@@ -829,6 +854,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
           <label class="form-label">ราคา (บาท)</label>
           <input class="form-input" type="number" id="fPrice" placeholder="0">
         </div>
+      </div>
+      <div class="form-row" id="fPkgRow" style="margin-top:12px">
+        <label class="form-label">เลือกแพ็กเกจราคา <span style="font-weight:400;color:var(--text-muted);font-size:11.5px;">(ใส่ราคาให้อัตโนมัติ)</span></label>
+        <select class="form-select" id="fPkg" onchange="applyPkgToForm(this.value)"></select>
       </div>
       <div class="form-row" style="margin-top:12px">
         <label class="form-label">นับเข้า KPI ขั้นไหนแล้วบ้าง <span style="font-weight:400;color:var(--text-muted);font-size:11.5px;">(ติ๊กอัตโนมัติตามสถานะ — แก้เองได้ถ้าใส่ผิด)</span></label>
@@ -1491,6 +1520,91 @@ function addProcType(label,color){
   pushSettingsToDB();
   toast(`เพิ่มประเภท "${label}" แล้ว ✅`,'success');
 }
+// ─── Price packages (แพ็กเกจราคา) ──────────────────────
+// เก็บใน localStorage และซิงก์ขึ้น app_settings.price_packages (ค่ากลางของคลินิก)
+let editingPkgId=null;
+function loadPricePackages(){
+  try{const v=JSON.parse(localStorage.getItem('pricePackages')||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}
+}
+function savePricePackagesLocal(){
+  try{localStorage.setItem('pricePackages',JSON.stringify(pricePackages));}catch(e){}
+}
+let pricePackages=loadPricePackages();
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmtBaht(n){return '฿'+Number(n||0).toLocaleString();}
+function renderPkgList(){
+  const box=document.getElementById('pkgList');
+  if(!box)return;
+  if(!pricePackages.length){
+    box.innerHTML='<div class="staff-empty">ยังไม่มีแพ็กเกจ ใส่ชื่อและราคาด้านล่างแล้วกด "+ เพิ่ม"</div>';
+    return;
+  }
+  box.innerHTML=pricePackages.map(p=>`
+    <div class="staff-row">
+      <span class="staff-row-email" title="${escHtml(p.name)}">${escHtml(p.name)}</span>
+      <span class="pkg-row-price">${fmtBaht(p.price)}</span>
+      <button class="pkg-row-btn" title="แก้ไข" onclick="editPkg('${p.id}')">✏️</button>
+      <button class="pkg-row-btn del" title="ลบ" onclick="deletePkg('${p.id}')">🗑️</button>
+    </div>`).join('');
+}
+function savePkg(){
+  const nameEl=document.getElementById('newPkgName'),priceEl=document.getElementById('newPkgPrice');
+  const name=nameEl.value.trim();
+  const price=parseFloat(priceEl.value);
+  if(!name||!(price>=0)){toast('กรุณาใส่ชื่อแพ็กเกจและราคาให้ครบ','error');return;}
+  if(editingPkgId){
+    const p=pricePackages.find(x=>x.id===editingPkgId);
+    if(p){p.name=name;p.price=price;}
+    toast('แก้ไขแพ็กเกจแล้ว ✅','success');
+  }else{
+    pricePackages.push({id:genId(),name,price});
+    toast('เพิ่มแพ็กเกจแล้ว ✅','success');
+  }
+  savePricePackagesLocal();pushSettingsToDB();
+  cancelEditPkg();renderPkgList();refreshPkgSelect();
+  nameEl.focus();
+}
+function editPkg(id){
+  const p=pricePackages.find(x=>x.id===id);
+  if(!p)return;
+  editingPkgId=id;
+  document.getElementById('newPkgName').value=p.name;
+  document.getElementById('newPkgPrice').value=p.price;
+  document.getElementById('btnSavePkg').textContent='💾 บันทึก';
+  document.getElementById('btnCancelPkg').style.display='';
+  document.getElementById('newPkgName').focus();
+}
+function cancelEditPkg(){
+  editingPkgId=null;
+  const n=document.getElementById('newPkgName');if(!n)return;
+  n.value='';document.getElementById('newPkgPrice').value='';
+  document.getElementById('btnSavePkg').textContent='+ เพิ่ม';
+  document.getElementById('btnCancelPkg').style.display='none';
+}
+function deletePkg(id){
+  const idx=pricePackages.findIndex(x=>x.id===id);
+  if(idx<0)return;
+  const removed=pricePackages[idx];
+  pricePackages.splice(idx,1);
+  if(editingPkgId===id)cancelEditPkg();
+  savePricePackagesLocal();pushSettingsToDB();renderPkgList();refreshPkgSelect();
+  toastUndo(`ลบแพ็กเกจ ${removed.name} แล้ว`,()=>{
+    pricePackages.splice(Math.min(idx,pricePackages.length),0,removed);
+    savePricePackagesLocal();pushSettingsToDB();renderPkgList();refreshPkgSelect();
+  });
+}
+function refreshPkgSelect(){
+  const sel=document.getElementById('fPkg'),row=document.getElementById('fPkgRow');
+  if(!sel)return;
+  row.style.display=pricePackages.length?'':'none';
+  sel.innerHTML='<option value="">— ไม่เลือก / ใส่ราคาเอง —</option>'+
+    pricePackages.map(p=>`<option value="${p.id}">${escHtml(p.name)} · ${fmtBaht(p.price)}</option>`).join('');
+}
+function applyPkgToForm(id){
+  const p=pricePackages.find(x=>x.id===id);
+  if(p)document.getElementById('fPrice').value=p.price;
+}
+
 // ─── Quick links (รวมลิงก์) ────────────────────────────
 let editingLinkId=null;
 function loadQuickLinks(){
@@ -1801,6 +1915,7 @@ async function pushSettingsToDB(){
       proc_colors:loadProcColors(),
       custom_proc_types:customProcTypes,
       quick_links:quickLinks,
+      price_packages:pricePackages,
       status_label_overrides:loadStatusLabelOverrides(),
       proc_label_overrides:loadProcLabelOverrides(),
     };
@@ -1880,6 +1995,11 @@ async function pullFromSupabaseOnLoad(){
         saveQuickLinksLocal(quickLinks);
         if(document.getElementById('page-links').classList.contains('active'))renderLinksPage();
       }
+      if(Array.isArray(settingsRow.price_packages)){
+        pricePackages=settingsRow.price_packages.filter(p=>p&&p.id&&p.name);
+        savePricePackagesLocal();
+        renderPkgList();refreshPkgSelect();
+      }
     }else if(!settingsErr&&!settingsRow){
       pushSettingsToDB();
     }
@@ -1943,6 +2063,7 @@ function showPage(name){
   if(name==='links'){cancelAddLink();renderLinksPage();}
   if(name==='settings'){
     populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());populateKpiTargetInputs(loadKpiTargets());applySettingsCardCollapse();
+    cancelEditPkg();renderPkgList();
     const staffCard=document.getElementById('cardStaff');
     if(staffCard){
       staffCard.style.display=isAdmin?'':'none';
@@ -1956,7 +2077,7 @@ function loadSettingsCollapseState(){
 function settingsCardSuffix(k){ return k.charAt(0).toUpperCase()+k.slice(1); }
 function applySettingsCardCollapse(){
   const state=loadSettingsCollapseState();
-  ['status','proc','kpi','staff'].forEach(k=>{
+  ['status','proc','kpi','pkg','staff'].forEach(k=>{
     const body=document.getElementById('body'+settingsCardSuffix(k));
     const btn=document.getElementById('toggle'+settingsCardSuffix(k));
     if(!body||!btn)return;
@@ -2593,6 +2714,7 @@ function openModal(s,apt){
   document.getElementById('fAddress').value=apt?(apt.address||''):'';
   document.getElementById('fSource').value=apt?(apt.source||''):'';
   document.getElementById('fPrice').value=apt?(apt.price||''):'';
+  refreshPkgSelect();
   document.getElementById('fNotes').value=apt?(apt.notes||''):'';
   document.getElementById('fFollowup').value=apt?(apt.followup_date||''):'';
   const ms=apt?(apt.milestones||{}):{};
