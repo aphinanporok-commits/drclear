@@ -410,6 +410,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .staff-add-row input{flex:1;}
 .staff-add-row select{flex-shrink:0;width:110px;}
 .staff-empty{font-size:12.5px;color:var(--text-muted);padding:6px 2px;}
+/* ══════════ STATS ══════════ */
+.stats-sec-title{font-size:14px;font-weight:800;margin:4px 0 10px;}
+.stats-today-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:22px;}
+@media(max-width:900px){.stats-today-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.stats-tile{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:12px;padding:12px 14px;}
+.stats-tile-label{font-size:12px;font-weight:700;color:var(--text-muted);white-space:nowrap;}
+.stats-tile-val{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px;}
+.stats-tile-sub{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+.stats-month-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.stats-month-label{font-size:15px;font-weight:800;min-width:130px;text-align:center;}
+.stats-sum-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+@media(max-width:900px){.stats-sum-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.stats-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow-x:auto;}
+.stats-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+.stats-table th{position:sticky;top:0;background:var(--cal-head-bg);text-align:right;padding:9px 12px;font-weight:800;white-space:nowrap;border-bottom:1px solid var(--border);}
+.stats-table th:first-child,.stats-table td:first-child{text-align:left;}
+.stats-table td{padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+.stats-table tr.today td{background:color-mix(in srgb,var(--primary) 10%,transparent);font-weight:800;}
+.stats-table tr.future td{color:var(--text-muted);opacity:.55;}
+.stats-table tr.weekend td:first-child{color:var(--danger);}
+.stats-table tfoot td{font-weight:800;background:var(--cal-head-bg);border-bottom:none;}
+.stats-table td.zero{color:var(--text-muted);opacity:.5;}
+.stats-rev-cell{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+.stats-rev-bar{height:6px;border-radius:3px;background:#E67E22;min-width:2px;}
+.stats-best{font-size:10.5px;font-weight:800;color:#E67E22;margin-left:4px;}
 /* ══════════ SHORT-TERM KPI ══════════ */
 .settings-wrap.terms-wrap{max-width:1100px;width:100%;}
 .terms-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
@@ -566,6 +591,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <button class="nav-btn" id="nav-list"     onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="nav-btn" id="nav-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
     <button class="nav-btn" id="nav-terms"    onclick="showPage('terms')">🎯 ชอตเทอม</button>
+    <button class="nav-btn" id="nav-stats"    onclick="showPage('stats')">📊 สถิติ</button>
     <button class="nav-btn" id="nav-links"    onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="nav-btn" id="nav-settings"  onclick="showPage('settings')">⚙️ ตั้งค่า</button>
   </div>
@@ -582,6 +608,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <button class="side-nav-item" id="side-list" onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="side-nav-item" id="side-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
     <button class="side-nav-item" id="side-terms" onclick="showPage('terms')">🎯 ชอตเทอม</button>
+    <button class="side-nav-item" id="side-stats" onclick="showPage('stats')">📊 สถิติ</button>
     <button class="side-nav-item" id="side-links" onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="side-nav-item" id="side-settings" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
     <div class="sidebar-heading" style="margin-top:20px;">✅ งานวันนี้</div>
@@ -670,6 +697,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <div class="settings-title">ชอตเทอม KPI</div>
     <div class="settings-subtitle" id="termsSubtitle">แบ่งเป้าหมายของเดือนเป็น 3 ช่วง ช่วงละ 10 วัน (เป้าแต่ละช่วง = เป้าทั้งเดือน ÷ 3)</div>
     <div id="termsContainer"></div>
+  </div>
+</div>
+
+<!-- ══════════ STATS PAGE ══════════ -->
+<div class="page" id="page-stats">
+  <div class="settings-wrap terms-wrap">
+    <div class="settings-title">สถิติ</div>
+    <div class="settings-subtitle">สรุปผลของวันนี้ และสถิติรายวันของทั้งเดือน (คำนวณจากข้อมูลนัดหมายที่บันทึกไว้ ดูย้อนหลังได้ทุกเดือน)</div>
+    <div id="statsToday"></div>
+    <div class="stats-month-bar">
+      <button class="cal-nav-btn" onclick="statsShiftMonth(-1)">&#8249;</button>
+      <div class="stats-month-label" id="statsMonthLabel">–</div>
+      <button class="cal-nav-btn" onclick="statsShiftMonth(1)">&#8250;</button>
+      <button class="btn-today" onclick="statsShiftMonth(0)">เดือนนี้</button>
+    </div>
+    <div id="statsMonth"></div>
   </div>
 </div>
 
@@ -2110,6 +2153,7 @@ function showPage(name){
   if(name==='calendar'){closePanel();renderCalendar();updateStats();}
   if(name==='links'){cancelAddLink();renderLinksPage();}
   if(name==='terms'){renderTermsPage();}
+  if(name==='stats'){renderStatsPage();}
   if(name==='settings'){
     populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());populateKpiTargetInputs(loadKpiTargets());applySettingsCardCollapse();
     cancelEditPkg();renderPkgList();
@@ -2222,6 +2266,115 @@ function updateStats(){
   }
   const termsPage=document.getElementById('page-terms');
   if(termsPage&&termsPage.classList.contains('active'))renderTermsPage();
+  const statsPage=document.getElementById('page-stats');
+  if(statsPage&&statsPage.classList.contains('active'))renderStatsPage();
+}
+
+// ─── สถิติ: สรุปวันนี้ + ตารางรายวันทั้งเดือน ───
+// คำนวณจากข้อมูลนัดหมายที่เก็บอยู่แล้ว จึงดูย้อนหลังได้ทุกเดือน
+//  - นัดหมาย = จำนวนนัดที่วันนัดตรงกับวันนั้น (ไม่นับที่ยกเลิก)
+//  - Appointment / Scan Done / Commence = จำนวนที่ติ๊กสำเร็จในวันนั้น (milestone_dates)
+//  - ยอดขาย = รวมราคาของนัดที่วันนัดตรงกับวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
+let statsMonthKey=null;
+function statsShiftMonth(n){
+  if(n===0||!statsMonthKey){statsMonthKey=currentMonthKey();}
+  else{
+    const [y,m]=statsMonthKey.split('-').map(Number);
+    const d=new Date(y,m-1+n,1);
+    statsMonthKey=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
+  renderStatsPage();
+}
+function statsForDays(days){
+  // days: Set ของวันที่ 'YYYY-MM-DD' → คืนค่าสถิติแยกรายวัน
+  const res={};
+  days.forEach(d=>{res[d]={apts:0,msAppointment:0,msScanDone:0,msCommence:0,revenue:0,cancelled:0};});
+  allApts.forEach(a=>{
+    const d=a.date?String(a.date).slice(0,10):null;
+    if(d&&res[d]){
+      if(a.status==='cancelled') res[d].cancelled++;
+      else{res[d].apts++;res[d].revenue+=Number(a.price)||0;}
+    }
+    MILESTONE_ORDER.forEach(k=>{
+      if(!(a.milestones&&a.milestones[k]))return;
+      const md=milestoneDate(a,k);
+      const mds=md?String(md).slice(0,10):null;
+      if(mds&&res[mds]) res[mds][k]++;
+    });
+  });
+  return res;
+}
+function renderStatsPage(){
+  const todayBox=document.getElementById('statsToday');
+  const monthBox=document.getElementById('statsMonth');
+  if(!todayBox||!monthBox)return;
+  if(!statsMonthKey)statsMonthKey=currentMonthKey();
+  const today=todayStr();
+  const money=v=>'฿'+Math.round(v).toLocaleString();
+  const cols=[
+    {key:'apts',label:'นัดหมาย',color:'var(--primary)'},
+    {key:'msAppointment',label:'Appointment',color:'var(--status-msAppointment)'},
+    {key:'msScanDone',label:'Scan Done',color:'var(--status-msScanDone)'},
+    {key:'msCommence',label:'Commence',color:'var(--status-msCommence)'},
+    {key:'revenue',label:'ยอดขาย',color:'#E67E22',money:true},
+  ];
+  // ── สรุปวันนี้ ──
+  const yest=addDays(today,-1);
+  const ts=statsForDays(new Set([today,yest]));
+  const t=ts[today],yv=ts[yest];
+  const diff=(a,b,isMoney)=>{
+    const d=a-b;
+    if(d===0)return 'เท่ากับเมื่อวาน';
+    const s=isMoney?money(Math.abs(d)):Math.abs(d);
+    return d>0?`▲ มากกว่าเมื่อวาน ${s}`:`▼ น้อยกว่าเมื่อวาน ${s}`;
+  };
+  todayBox.innerHTML=`<div class="stats-sec-title">📅 สรุปวันนี้ · ${fmtDateLong(today)}</div>
+    <div class="stats-today-grid">${cols.map(c=>`
+      <div class="stats-tile" style="border-left-color:${c.color}">
+        <div class="stats-tile-label">${c.label}${c.key==='apts'?' (วันนี้)':''}</div>
+        <div class="stats-tile-val">${c.money?money(t[c.key]):t[c.key]}</div>
+        <div class="stats-tile-sub">${diff(t[c.key],yv[c.key],c.money)}${c.key==='apts'&&t.cancelled?` · ยกเลิก ${t.cancelled}`:''}</div>
+      </div>`).join('')}
+    </div>`;
+  // ── ตารางรายวันทั้งเดือน ──
+  const [y,m]=statsMonthKey.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const days=[];for(let d=1;d<=lastDay;d++)days.push(ds(y,m-1,d));
+  const st=statsForDays(new Set(days));
+  const tot={apts:0,msAppointment:0,msScanDone:0,msCommence:0,revenue:0,cancelled:0};
+  days.forEach(d=>Object.keys(tot).forEach(k=>tot[k]+=st[d][k]));
+  const maxRev=Math.max(0,...days.map(d=>st[d].revenue));
+  const bestDay=maxRev>0?days.find(d=>st[d].revenue===maxRev):null;
+  const elapsed=days.filter(d=>d<=today).length||lastDay;
+  document.getElementById('statsMonthLabel').textContent=thMonthYearLabel(statsMonthKey);
+  const sumTiles=cols.map(c=>{
+    const avg=tot[c.key]/elapsed;
+    return `<div class="stats-tile" style="border-left-color:${c.color}">
+      <div class="stats-tile-label">${c.label} (ทั้งเดือน)</div>
+      <div class="stats-tile-val">${c.money?money(tot[c.key]):tot[c.key]}</div>
+      <div class="stats-tile-sub">เฉลี่ยวันละ ${c.money?money(avg):avg.toFixed(1)}</div>
+    </div>`;
+  }).join('');
+  const rows=days.map(d=>{
+    const r=st[d];
+    const dow=new Date(d+'T00:00:00').getDay();
+    const cls=[d===today?'today':'',d>today?'future':'',(dow===0||dow===6)?'weekend':''].filter(Boolean).join(' ');
+    const cells=cols.map(c=>{
+      const v=r[c.key];
+      if(c.money){
+        const w=maxRev>0?Math.round(v/maxRev*80):0;
+        return `<td class="${v?'':'zero'}"><div class="stats-rev-cell">${v?`<div class="stats-rev-bar" style="width:${w}px"></div>`:''}<span>${v?money(v):'–'}</span>${d===bestDay?'<span class="stats-best">★ สูงสุด</span>':''}</div></td>`;
+      }
+      return `<td class="${v?'':'zero'}">${v||'–'}</td>`;
+    }).join('');
+    return `<tr class="${cls}"><td>${['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'][dow]} ${fmtDateShort(d)}${d===today?' (วันนี้)':''}</td>${cells}</tr>`;
+  }).join('');
+  monthBox.innerHTML=`<div class="stats-sum-grid">${sumTiles}</div>
+    <div class="stats-table-wrap"><table class="stats-table">
+      <thead><tr><th>วันที่</th>${cols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td>รวมทั้งเดือน</td>${cols.map(c=>`<td>${c.money?money(tot[c.key]):tot[c.key]}</td>`).join('')}</tr></tfoot>
+    </table></div>`;
 }
 function cap(key){ return key.charAt(0).toUpperCase()+key.slice(1); }
 
