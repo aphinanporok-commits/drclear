@@ -435,7 +435,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .stats-table tr.future td{color:var(--text-muted);opacity:.55;}
 .stats-table tr.weekend td:first-child{color:var(--danger);}
 .stats-table tfoot td{font-weight:800;background:var(--cal-head-bg);border-bottom:none;border-top:2px solid var(--border);}
-.stats-table td.zero{color:var(--text-muted);opacity:.5;}
+.stats-table td.zero{color:var(--text-muted);}
 .stats-rev-cell{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
 .stats-rev-bar{height:6px;border-radius:3px;background:#E67E22;min-width:2px;}
 .stats-best{font-size:10.5px;font-weight:800;color:#E67E22;margin-left:4px;}
@@ -2347,9 +2347,9 @@ function renderStatsPage(){
       const v=r[c.key];
       if(c.money){
         const w=maxRev>0?Math.round(v/maxRev*80):0;
-        return `<td class="${v?'':'zero'}"><div class="stats-rev-cell">${v?`<div class="stats-rev-bar" style="width:${w}px"></div>`:''}<span>${v?money(v):'–'}</span>${d===bestDay?'<span class="stats-best">★ สูงสุด</span>':''}</div></td>`;
+        return `<td class="${v?'':'zero'}"><div class="stats-rev-cell">${v?`<div class="stats-rev-bar" style="width:${w}px"></div>`:''}<span>${money(v)}</span>${d===bestDay?'<span class="stats-best">★ สูงสุด</span>':''}</div></td>`;
       }
-      return `<td class="${v?'':'zero'}">${v||'–'}</td>`;
+      return `<td class="${v?'':'zero'}">${v}</td>`;
     }).join('');
     return `<tr class="${cls}"><td>${['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'][dow]} ${fmtDateShort(d)}${d===today?' (วันนี้)':''}</td>${cells}</tr>`;
   }).join('');
