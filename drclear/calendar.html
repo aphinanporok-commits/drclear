@@ -607,7 +607,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="stat-card-value"><span id="statMsCommence">–</span><span class="stat-card-value-target" id="targetLabelMsCommence"></span></div>
         <div class="stat-card-bar" id="barWrapMsCommence" style="display:none"><div class="stat-card-bar-fill" id="barMsCommence" style="background:var(--status-msCommence)"></div></div>
       </div>
-      <div class="stat-card" style="border-left-color:#E67E22" title="รวมราคาของนัดหมายที่ถึงขั้น Commence ในเดือนนี้">
+      <div class="stat-card" style="border-left-color:#E67E22" title="รวมราคาของนัดหมายในเดือนนี้ (ไม่นับที่ยกเลิก)">
         <div class="stat-card-label">ยอดขาย</div>
         <div class="stat-card-value"><span id="statRevenue">–</span><span class="stat-card-value-target" id="targetLabelRevenue"></span></div>
         <div class="stat-card-bar" id="barWrapRevenue" style="display:none"><div class="stat-card-bar-fill" id="barRevenue" style="background:#E67E22"></div></div>
@@ -2163,9 +2163,10 @@ function updateStats(){
       if(barWrapEl) barWrapEl.style.display='none';
     }
   });
-  // ยอดขาย = รวมราคาของรายการที่ถึงขั้น Commence ในเดือนนี้ (ใช้วันที่ติ๊ก Commence จริง เหมือน KPI ด้านบน)
+  // ยอดขาย = รวมราคาของทุกนัดหมายที่ใส่ราคาไว้ และวันนัดอยู่ในเดือนนี้ (นับเดือนต่อเดือน — ขึ้นเดือนใหม่เริ่ม 0)
+  // ไม่นับรายการที่สถานะ "ยกเลิก"
   const revenue=allApts
-    .filter(a=>a.milestones&&a.milestones.msCommence&&isInCurrentMonth(milestoneDate(a,'msCommence')))
+    .filter(a=>a.status!=='cancelled'&&isInCurrentMonth(a.date))
     .reduce((s,a)=>s+(Number(a.price)||0),0);
   const revEl=document.getElementById('statRevenue');
   if(revEl){
