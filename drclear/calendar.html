@@ -1824,19 +1824,29 @@ const DEMO_APTS=[
   {id:'13',patient_name:'วรรณา มีสุข',       date:ds(Y,M,today.getDate()-5), time:'11:00:00',procedure_type:'whitening',status:'cancelled',price:2000, phone:'089-123-4567',notes:'ยกเลิกเอง'},
 ];
 // ─── Appointment persistence (localStorage) ───
+// แคชในเบราว์เซอร์แยกตามบัญชี (allApts_<uid>) — สลับ email บนเครื่องเดียวกันจะไม่เห็นข้อมูลของคนอื่น
+function aptsCacheKey(){
+  return (typeof currentUser!=='undefined'&&currentUser&&currentUser.id)?'allApts_'+currentUser.id:null;
+}
 function loadAppointments(){
+  const key=aptsCacheKey();
+  if(!key) return DEMO_APTS.slice(); // ยังไม่ล็อกอิน (โหมดออฟไลน์/เดโม)
   try{
-    const saved=localStorage.getItem('allApts');
+    const saved=localStorage.getItem(key);
     if(saved){
       const arr=JSON.parse(saved);
-      if(Array.isArray(arr)) return arr;
+      if(Array.isArray(arr)) return arr.filter(a=>!a.owner_id||a.owner_id===currentUser.id);
     }
   }catch(e){}
-  return DEMO_APTS.slice();
+  return [];
 }
 function saveAppointmentsLocal(){
-  try{localStorage.setItem('allApts',JSON.stringify(allApts));}catch(e){}
+  const key=aptsCacheKey();
+  if(!key)return;
+  try{localStorage.setItem(key,JSON.stringify(allApts));}catch(e){}
 }
+try{localStorage.removeItem('allApts');}catch(e){} // ลบแคชรวมแบบเก่าที่ไม่แยกบัญชี
+let currentUser=null;
 let allApts=loadAppointments();
 
 // ─── Supabase cloud sync (optional — falls back to localStorage only) ───
@@ -1851,9 +1861,8 @@ try{
 
 // ─── Google sign-in (each staff member only sees their own leads/appointments) ───
 // Access is gated by the "staff_members" table: only emails listed there may use
-// the app at all, and their role ('admin' | 'staff') decides whether they see
-// everyone's data (enforced by Supabase RLS) or just their own.
-let currentUser=null;
+// the app at all. Every account (admin included) sees only its own appointments
+// (enforced by Supabase RLS); admin only additionally manages the staff list.
 let isAdmin=false;
 function signInWithGoogle(){
   if(!sb){
@@ -1883,7 +1892,9 @@ function showAuthGate(msg,opts){
   if(tryAnotherBtn) tryAnotherBtn.style.display=opts.blocked?'':'none';
 }
 function showAppAfterAuth(user){
+  const switched=!currentUser||currentUser.id!==user.id;
   currentUser=user;
+  if(switched) allApts=loadAppointments(); // โหลดแคชของบัญชีนี้เท่านั้น
   const gate=document.getElementById('authGate');
   const root=document.getElementById('appRoot');
   if(gate) gate.classList.remove('open');
@@ -2100,7 +2111,8 @@ async function pullFromSupabaseOnLoad(){
       pushSettingsToDB();
     }
     if(seedMilestoneStatuses())pushSettingsToDB();
-    const {data,error}=await sb.from('appointments').select('*');
+    if(!currentUser)return;
+    const {data,error}=await sb.from('appointments').select('*').eq('owner_id',currentUser.id);
     if(error){console.error('appointments fetch error',error);return;}
     // DB is the source of truth once reachable — an empty table means genuinely zero
     // appointments (don't push fake/demo data into the real shared database).
