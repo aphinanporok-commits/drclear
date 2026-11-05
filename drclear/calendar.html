@@ -377,6 +377,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .todo-item.todo-done .todo-item-name{text-decoration:line-through;color:var(--text-muted);}
 .todo-item.todo-followup{background:color-mix(in srgb,#8E44AD 8%,transparent);}
 .todo-item.todo-followup:hover{background:color-mix(in srgb,#8E44AD 15%,transparent);}
+.todo-late{font-size:10.5px;font-weight:700;color:#E74C3C;margin-top:1px;}
+.todo-due-today{font-size:10.5px;font-weight:700;color:#8E44AD;margin-top:1px;}
 .todo-empty{padding:14px 8px;font-size:12.5px;color:var(--text-muted);text-align:center;}
 
 /* ══════════ STAT CARDS ══════════ */
@@ -2502,7 +2504,12 @@ function renderTodoPanel(){
   if(!box)return;
   const td=todayStr();
   const todays=allApts.filter(a=>a.date===td).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const followups=allApts.filter(a=>a.followup_date===td);
+  // ต้องติดต่อ = วันที่ติดต่อถึงกำหนดวันนี้ หรือเลยกำหนดมาแล้ว (ค้างจากวันก่อน) — ยังโชว์จนกว่าจะเลื่อนวันติดต่อใหม่
+  // ไม่รวมรายการที่ยกเลิก เรียงจากค้างนานสุดก่อน
+  const followups=allApts
+    .filter(a=>a.followup_date&&String(a.followup_date).slice(0,10)<=td&&a.status!=='cancelled')
+    .sort((a,b)=>String(a.followup_date).localeCompare(String(b.followup_date)));
+  const daysLate=f=>Math.round((new Date(td+'T00:00:00')-new Date(String(f).slice(0,10)+'T00:00:00'))/86400000);
   let html='';
   if(!todays.length&&!followups.length){
     html=`<div class="todo-empty">ไม่มีงานวันนี้ 🎉</div>`;
@@ -2523,10 +2530,16 @@ function renderTodoPanel(){
     }
     if(followups.length){
       html+=`<div class="todo-sub-label">📞 ต้องติดต่อวันนี้ (${followups.length})</div>`;
-      html+=followups.map(a=>`<div class="todo-item todo-followup" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
+      html+=followups.map(a=>{
+        const late=daysLate(a.followup_date);
+        const badge=late>0
+          ?`<div class="todo-late">เลยมา ${late} วัน · ${fmtDateShort(String(a.followup_date).slice(0,10))}</div>`
+          :`<div class="todo-due-today">วันนี้</div>`;
+        return `<div class="todo-item todo-followup" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
           <span class="todo-item-icon">📞</span>
-          <div class="todo-item-body"><div class="todo-item-name">${a.patient_name}</div></div>
-        </div>`).join('');
+          <div class="todo-item-body"><div class="todo-item-name">${a.patient_name}</div>${badge}</div>
+        </div>`;
+      }).join('');
     }
   }
   box.innerHTML=html;
