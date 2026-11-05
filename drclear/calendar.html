@@ -424,13 +424,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 @media(max-width:900px){.stats-sum-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 .stats-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow-x:auto;}
 .stats-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
-.stats-table th{position:sticky;top:0;background:var(--cal-head-bg);text-align:right;padding:9px 12px;font-weight:800;white-space:nowrap;border-bottom:1px solid var(--border);}
+.stats-table th{background:var(--cal-head-bg);text-align:center;padding:9px 12px;font-weight:800;white-space:nowrap;border:1px solid var(--border);}
 .stats-table th:first-child,.stats-table td:first-child{text-align:left;}
-.stats-table td{padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+.stats-table td{padding:7px 12px;text-align:right;border:1px solid var(--border);white-space:nowrap;}
+.stats-table tr>*:first-child{border-left:none;}
+.stats-table tr>*:last-child{border-right:none;}
+.stats-table thead th{border-top:none;}
+.stats-table tbody tr:hover td{background:color-mix(in srgb,var(--primary) 5%,transparent);}
 .stats-table tr.today td{background:color-mix(in srgb,var(--primary) 10%,transparent);font-weight:800;}
 .stats-table tr.future td{color:var(--text-muted);opacity:.55;}
 .stats-table tr.weekend td:first-child{color:var(--danger);}
-.stats-table tfoot td{font-weight:800;background:var(--cal-head-bg);border-bottom:none;}
+.stats-table tfoot td{font-weight:800;background:var(--cal-head-bg);border-bottom:none;border-top:2px solid var(--border);}
 .stats-table td.zero{color:var(--text-muted);opacity:.5;}
 .stats-rev-cell{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
 .stats-rev-bar{height:6px;border-radius:3px;background:#E67E22;min-width:2px;}
@@ -704,8 +708,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 <div class="page" id="page-stats">
   <div class="settings-wrap terms-wrap">
     <div class="settings-title">สถิติ</div>
-    <div class="settings-subtitle">สรุปผลของวันนี้ และสถิติรายวันของทั้งเดือน (คำนวณจากข้อมูลนัดหมายที่บันทึกไว้ ดูย้อนหลังได้ทุกเดือน)</div>
-    <div id="statsToday"></div>
+    <div class="settings-subtitle">สถิติรายวันของทั้งเดือน (คำนวณจากข้อมูลนัดหมายที่บันทึกไว้ ดูย้อนหลังได้ทุกเดือน)</div>
     <div class="stats-month-bar">
       <button class="cal-nav-btn" onclick="statsShiftMonth(-1)">&#8249;</button>
       <div class="stats-month-label" id="statsMonthLabel">–</div>
@@ -2305,9 +2308,8 @@ function statsForDays(days){
   return res;
 }
 function renderStatsPage(){
-  const todayBox=document.getElementById('statsToday');
   const monthBox=document.getElementById('statsMonth');
-  if(!todayBox||!monthBox)return;
+  if(!monthBox)return;
   if(!statsMonthKey)statsMonthKey=currentMonthKey();
   const today=todayStr();
   const money=v=>'฿'+Math.round(v).toLocaleString();
@@ -2318,24 +2320,6 @@ function renderStatsPage(){
     {key:'msCommence',label:'Commence',color:'var(--status-msCommence)'},
     {key:'revenue',label:'ยอดขาย',color:'#E67E22',money:true},
   ];
-  // ── สรุปวันนี้ ──
-  const yest=addDays(today,-1);
-  const ts=statsForDays(new Set([today,yest]));
-  const t=ts[today],yv=ts[yest];
-  const diff=(a,b,isMoney)=>{
-    const d=a-b;
-    if(d===0)return 'เท่ากับเมื่อวาน';
-    const s=isMoney?money(Math.abs(d)):Math.abs(d);
-    return d>0?`▲ มากกว่าเมื่อวาน ${s}`:`▼ น้อยกว่าเมื่อวาน ${s}`;
-  };
-  todayBox.innerHTML=`<div class="stats-sec-title">📅 สรุปวันนี้ · ${fmtDateLong(today)}</div>
-    <div class="stats-today-grid">${cols.map(c=>`
-      <div class="stats-tile" style="border-left-color:${c.color}">
-        <div class="stats-tile-label">${c.label}${c.key==='apts'?' (วันนี้)':''}</div>
-        <div class="stats-tile-val">${c.money?money(t[c.key]):t[c.key]}</div>
-        <div class="stats-tile-sub">${diff(t[c.key],yv[c.key],c.money)}${c.key==='apts'&&t.cancelled?` · ยกเลิก ${t.cancelled}`:''}</div>
-      </div>`).join('')}
-    </div>`;
   // ── ตารางรายวันทั้งเดือน ──
   const [y,m]=statsMonthKey.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
