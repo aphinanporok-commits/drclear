@@ -1835,7 +1835,7 @@ function loadAppointments(){
     const saved=localStorage.getItem(key);
     if(saved){
       const arr=JSON.parse(saved);
-      if(Array.isArray(arr)) return arr.filter(a=>!a.owner_id||a.owner_id===currentUser.id);
+      if(Array.isArray(arr)) return isAdmin?arr:arr.filter(a=>!a.owner_id||a.owner_id===currentUser.id);
     }
   }catch(e){}
   return [];
@@ -1861,8 +1861,8 @@ try{
 
 // ─── Google sign-in (each staff member only sees their own leads/appointments) ───
 // Access is gated by the "staff_members" table: only emails listed there may use
-// the app at all. Every account (admin included) sees only its own appointments
-// (enforced by Supabase RLS); admin only additionally manages the staff list.
+// the app at all. Staff see only their own appointments; admin sees everyone's
+// (enforced by Supabase RLS) and also manages the staff list.
 let isAdmin=false;
 function signInWithGoogle(){
   if(!sb){
@@ -2112,7 +2112,10 @@ async function pullFromSupabaseOnLoad(){
     }
     if(seedMilestoneStatuses())pushSettingsToDB();
     if(!currentUser)return;
-    const {data,error}=await sb.from('appointments').select('*').eq('owner_id',currentUser.id);
+    // แอดมินเห็นของทุกคน · พนักงานเห็นเฉพาะของตัวเอง
+    let q=sb.from('appointments').select('*');
+    if(!isAdmin) q=q.eq('owner_id',currentUser.id);
+    const {data,error}=await q;
     if(error){console.error('appointments fetch error',error);return;}
     // DB is the source of truth once reachable — an empty table means genuinely zero
     // appointments (don't push fake/demo data into the real shared database).
