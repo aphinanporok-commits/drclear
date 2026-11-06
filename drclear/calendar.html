@@ -3162,36 +3162,28 @@ function renderTodoPanel(){
   const box=document.getElementById('todoPanel');
   if(!box)return;
   const td=todayStr();
-  const todays=viewApts().filter(a=>a.date===td).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  // ต้องติดต่อ = เฉพาะรายการที่ตั้งวันติดต่อไว้ตรงกับวันนี้เท่านั้น (ไม่เอาที่เลยกำหนดแล้ว) ไม่รวมที่ยกเลิก
+  // งานวันนี้ = เฉพาะลูกค้าที่ตั้ง "วันที่ต้องการติดต่ออีกครั้ง" (followup_date) ตรงกับวันนี้เท่านั้น
+  // ไม่เอาวันนัดหมาย/วันที่กรอกหลีด ไม่เอาที่เลยกำหนดแล้ว และไม่รวมที่ยกเลิก — ติ๊กว่าโทรแล้วได้
   const followups=viewApts()
     .filter(a=>a.followup_date&&String(a.followup_date).slice(0,10)===td&&a.status!=='cancelled')
     .sort((a,b)=>(a.patient_name||'').localeCompare(b.patient_name||''));
   let html='';
-  if(!todays.length&&!followups.length){
-    html=`<div class="todo-empty">ไม่มีงานวันนี้ 🎉</div>`;
+  if(!followups.length){
+    html=`<div class="todo-empty">วันนี้ไม่มีลูกค้าที่ต้องติดต่อ 🎉</div>`;
   }else{
-    if(todays.length){
-      html+=`<div class="todo-sub-label">นัดหมายวันนี้ (${todays.length})</div>`;
-      const doneTodos=loadTodoDoneSet();
-      html+=todays.map(a=>{
-        const done=doneTodos.has(a.id);
-        return `<div class="todo-item ${done?'todo-done':''}" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
-          <input type="checkbox" class="todo-check" ${done?'checked':''} onclick="event.stopPropagation();toggleTodoDone('${a.id}')" title="ทำเสร็จแล้ว">
+    const doneTodos=loadTodoDoneSet();
+    const doneCount=followups.filter(a=>doneTodos.has(a.id)).length;
+    html+=`<div class="todo-sub-label">📞 ต้องติดต่อวันนี้ (${doneCount}/${followups.length})</div>`;
+    html+=followups.map(a=>{
+      const done=doneTodos.has(a.id);
+      return `<div class="todo-item todo-followup ${done?'todo-done':''}" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
+          <input type="checkbox" class="todo-check" ${done?'checked':''} onclick="event.stopPropagation();toggleTodoDone('${a.id}')" title="ติดต่อแล้ว">
           <div class="todo-item-body">
-            <div class="todo-item-time">${a.time?a.time.slice(0,5):''}</div>
-            <div class="todo-item-name">${a.patient_name}</div>
+            <div class="todo-item-name">${escHtml(a.patient_name)}</div>
+            ${a.phone?`<div class="todo-item-time">📞 ${escHtml(a.phone)}</div>`:''}
           </div>
         </div>`;
-      }).join('');
-    }
-    if(followups.length){
-      html+=`<div class="todo-sub-label">📞 ต้องติดต่อวันนี้ (${followups.length})</div>`;
-      html+=followups.map(a=>`<div class="todo-item todo-followup" onclick='openModal("${a.date}",${JSON.stringify(a).replace(/'/g,"&#39;")})'>
-          <span class="todo-item-icon">📞</span>
-          <div class="todo-item-body"><div class="todo-item-name">${a.patient_name}</div></div>
-        </div>`).join('');
-    }
+    }).join('');
   }
   box.innerHTML=html;
 }
