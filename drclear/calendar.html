@@ -427,6 +427,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .grp-grid label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--text-muted);}
 .grp-grid label.span2{grid-column:span 2;}
 .grp-preview-col{position:sticky;top:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+.grp-steps{display:flex;gap:6px;margin:12px 0 2px;}
+.grp-step{flex:1;padding:9px 10px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);color:var(--text-muted);
+  font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;}
+.grp-step.active{border-color:var(--primary);background:var(--primary);color:#fff;}
+.grp-step-nav{display:flex;justify-content:space-between;align-items:center;margin-top:16px;}
+.grp-hint{font-size:12px;color:var(--text-muted);background:var(--bg);border-radius:9px;padding:8px 10px;margin-top:12px;}
 .grp-reset-btn{background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:9px;
   padding:8px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 .grp-reset-btn:hover{border-color:var(--danger);color:var(--danger);}
@@ -759,6 +765,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
           <input class="form-input" id="grpSearch" placeholder="🔍 ค้นหาชื่อ / เบอร์โทร..." oninput="event.stopPropagation();grpRenderPicker()">
           <select class="form-select" id="grpApt" onchange="event.stopPropagation();grpLoadApt(this.value)"></select>
         </div>
+        <div class="grp-steps">
+          <button type="button" class="grp-step active" id="grpStepBtn1" onclick="grpGoStep(1)">① ข้อมูลจอง</button>
+          <button type="button" class="grp-step" id="grpStepBtn2" onclick="grpGoStep(2)">② Confirm Booking</button>
+        </div>
+        <div id="grpStep1">
         <div class="grp-sec">ข้อมูลลูกค้า</div>
         <div class="grp-grid">
           <label>Name<input class="form-input" id="gName"></label>
@@ -791,10 +802,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
           <label class="span2">Chanel<input class="form-input" id="gChannel" placeholder="เช่น FB Dr Clear Aligners (ชื่อเพจ/แอดมิน)"></label>
           <label class="span2">Sales in Charge<input class="form-input" id="gSales" placeholder="ชื่อเซลล์"></label>
         </div>
+        <div class="grp-step-nav"><span></span><button type="button" class="btn-new-apt" onclick="grpGoStep(2)">ถัดไป: Confirm Booking →</button></div>
+        </div>
+        <div id="grpStep2" style="display:none">
+        <div class="grp-hint">ชื่อ วันเวลานัด สาขา เบอร์ อีเมล ที่อยู่ Line DOB มัดจำ โปร และ Channel ดึงมาจากขั้นที่ ① ให้อัตโนมัติ (แก้ได้ที่ขั้น ①)</div>
+        <div class="grp-sec">หัวข้อ Confirm Booking</div>
+        <div class="grp-grid">
+          <label>ชื่อเซลล์ในวงเล็บ<input class="form-input" id="gSalesShort" placeholder="เช่น Neena/Gift (ว่าง = ใช้ Sales in Charge)"></label>
+          <label>ส่วนลดจากเซลล์<input class="form-input" type="number" id="gDiscount" placeholder="เช่น 3500"></label>
+          <label>ค่าใช้จ่ายที่ประเมินไว้ (THB)<input class="form-input" type="number" id="gEstCost" placeholder="เช่น 39900"></label>
+          <label>ของแถม<input class="form-input" id="gGift" placeholder="เช่น Retainer 1Set"></label>
+        </div>
+        <div class="grp-sec">ข้อมูลคนไข้</div>
+        <div class="grp-grid">
+          <label class="span2">ชื่อ-นามสกุล (ไทย)<input class="form-input" id="gNameTh"></label>
+          <label>อายุ<input class="form-input" id="gAge" placeholder="ว่าง = คำนวณจาก DOB"></label>
+          <label>จัดฟันครั้งที่<input class="form-input" id="gOrthoCount" placeholder="เช่น 1"></label>
+          <label class="span2">ข้อกังวล<input class="form-input" id="gConcern" placeholder="เช่น ฟันเหยิน"></label>
+          <label>โรคประจำตัว<input class="form-input" id="gDisease" placeholder="เช่น ไม่มี"></label>
+          <label>ยาที่ทานประจำ<input class="form-input" id="gMeds" placeholder="เช่น ไม่มี"></label>
+        </div>
+        <div class="grp-step-nav"><button type="button" class="grp-reset-btn" onclick="grpGoStep(1)">← กลับไปขั้นที่ ①</button><span></span></div>
+        </div>
       </div>
       <div class="grp-preview-col">
         <div class="grp-preview-head">
-          <span>ข้อความที่จะส่ง</span>
+          <span id="grpPreviewTitle">ข้อความที่จะส่ง · ① ข้อมูลจอง</span>
           <div style="display:flex;gap:8px;">
             <button class="grp-reset-btn" onclick="grpReset()">🔄 กรอกใหม่</button>
             <button class="btn-export-summary" onclick="grpSave(true)">💾 บันทึก</button>
@@ -2486,7 +2519,71 @@ function grpLoadApt(id){
   grpSet('gNote',a?a.notes:'');
   grpSet('gChannel',ri.channel!=null?ri.channel:(def.channel||((a&&a.source&&srcShort[a.source])?srcShort[a.source]:'')));
   grpSet('gSales',ri.sales!=null?ri.sales:(def.sales||''));
+  // ขั้นที่ ② Confirm Booking
+  grpSet('gSalesShort',ri.sales_short);
+  grpSet('gDiscount',ri.discount);
+  grpSet('gEstCost',ri.est_cost!=null&&ri.est_cost!==''?ri.est_cost:(a&&a.price?a.price:''));
+  grpSet('gGift',ri.gift);
+  grpSet('gNameTh',ri.name_th);
+  grpSet('gAge',ri.age);
+  grpSet('gOrthoCount',ri.ortho_count);
+  grpSet('gConcern',ri.concern);
+  grpSet('gDisease',ri.disease);
+  grpSet('gMeds',ri.meds);
   grpUpdatePreview();
+}
+let grpStep=1;
+function grpGoStep(n){
+  grpStep=n;
+  document.getElementById('grpStep1').style.display=n===1?'':'none';
+  document.getElementById('grpStep2').style.display=n===2?'':'none';
+  document.getElementById('grpStepBtn1').classList.toggle('active',n===1);
+  document.getElementById('grpStepBtn2').classList.toggle('active',n===2);
+  document.getElementById('grpPreviewTitle').textContent='ข้อความที่จะส่ง · '+(n===1?'① ข้อมูลจอง':'② Confirm Booking');
+  grpUpdatePreview();
+  const main=document.querySelector('.app-main');if(main)main.scrollTo({top:0,behavior:'smooth'});
+}
+// อายุจาก DOB รูปแบบ วว/ดด/ปปปป (ถ้าปีเป็น พ.ศ. > 2400 จะแปลงเป็น ค.ศ. ให้)
+function grpCalcAge(dob){
+  const m=String(dob||'').match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if(!m)return '';
+  let y=+m[3];if(y>2400)y-=543;
+  const b=new Date(y,+m[2]-1,+m[1]);if(isNaN(b))return '';
+  const now=new Date();
+  let age=now.getFullYear()-b.getFullYear();
+  if(now.getMonth()<b.getMonth()||(now.getMonth()===b.getMonth()&&now.getDate()<b.getDate()))age--;
+  return age>=0&&age<130?String(age):'';
+}
+function grpBuildConfirmText(){
+  const v=id=>grpGet(id)||'-';
+  const num=id=>grpGet(id)?Number(grpGet(id)).toLocaleString():'-';
+  const time=grpGet('gTime');
+  const salesShort=grpGet('gSalesShort')||grpGet('gSales');
+  const treatPromo=[grpGet('gTreatment'),grpGet('gPromo')].filter(Boolean).join('+');
+  return [
+    `Confirm Booking ${grpGet('gDate')?fmtEnDate(grpGet('gDate')):'-'}  Time ${time?time.replace(':','.')+' น.':'-'}  At  ${v('gBranch')}`,
+    ``,
+    `* ${v('gName')}${salesShort?`  (${salesShort})`:''}${treatPromo?'  '+treatPromo:''}*`,
+    ``,
+    `คนไข้มัดจำมาแล้ว ${num('gDeposit')}`,
+    `ส่วนลดจากเซลล์ : ${num('gDiscount')}`,
+    `ค่าใช้จ่ายที่ประเมินไว้ : ${num('gEstCost')} THB.`,
+    `ของแถม : ${v('gGift')}`,
+    ``,``,
+    `ชื่อ-นามสกุล (ไทย) : ${v('gNameTh')}`,
+    `ชื่อ-นามสกุล (อังกฤษ) : ${v('gName')}`,
+    `วัน เดือน ปีเกิด(ค.ศ.) : ${v('gDob')}`,
+    `อายุ : ${grpGet('gAge')||grpCalcAge(grpGet('gDob'))||'-'}`,
+    `เบอร์โทร : ${v('gPhone')}`,
+    `อีเมล : ${v('gEmail')}`,
+    `ที่อยู่ ตามบัตรประชาชน(ภาษาอังกฤษ) :${v('gAddress')}`,
+    `ID Line : ${v('gLine')}`,
+    `จัดฟันครั้งที่ : ${v('gOrthoCount')}`,
+    `ข้อกังวล : ${v('gConcern')}`,
+    `โรคประจำตัว : ${v('gDisease')}`,
+    `ยาที่ทานประจำ : ${v('gMeds')}`,
+    `Channel : ${v('gChannel')}`,
+  ].join('\n');
 }
 // 🔄 กรอกใหม่: ล้างฟอร์มทั้งหมด + ยกเลิกการเลือกลูกค้า (ข้อมูลที่บันทึกไว้กับนัดเดิมไม่ถูกลบ)
 function grpReset(){
@@ -2495,7 +2592,7 @@ function grpReset(){
   document.querySelectorAll('#grpForm input:not(#grpSearch), #grpForm textarea').forEach(el=>{el.value='';});
   grpRenderPicker();
   const sel=document.getElementById('grpApt');if(sel)sel.value='';
-  grpUpdatePreview();
+  grpGoStep(1);
   window.scrollTo({top:0,behavior:'smooth'});
   const main=document.querySelector('.app-main');if(main)main.scrollTo({top:0,behavior:'smooth'});
   toast('ล้างฟอร์มแล้ว เริ่มกรอกใหม่ได้เลย','info');
@@ -2534,7 +2631,7 @@ function grpBuildText(){
 }
 function grpUpdatePreview(){
   const pv=document.getElementById('grpPreview');
-  if(pv)pv.value=grpBuildText();
+  if(pv)pv.value=grpStep===2?grpBuildConfirmText():grpBuildText();
 }
 function grpSave(showToast){
   // จำค่าที่มักใช้ซ้ำไว้เป็นค่าเริ่มต้น
@@ -2559,6 +2656,9 @@ function grpSave(showToast){
     dob:grpGet('gDob'),pay_date:grpGet('gPayDate'),deposit:grpGet('gDeposit'),
     pay_channel:grpGet('gPayChannel'),promotion:grpGet('gPromo'),treatment:grpGet('gTreatment'),
     branch:grpGet('gBranch'),channel:grpGet('gChannel'),sales:grpGet('gSales'),
+    sales_short:grpGet('gSalesShort'),discount:grpGet('gDiscount'),est_cost:grpGet('gEstCost'),gift:grpGet('gGift'),
+    name_th:grpGet('gNameTh'),age:grpGet('gAge'),ortho_count:grpGet('gOrthoCount'),
+    concern:grpGet('gConcern'),disease:grpGet('gDisease'),meds:grpGet('gMeds'),
   };
   allApts[idx]=a;
   saveAppointments();
@@ -2566,7 +2666,7 @@ function grpSave(showToast){
   if(showToast)toast('บันทึกข้อมูลแล้ว ✅','success');
 }
 async function grpCopy(){
-  const text=grpBuildText();
+  const text=grpStep===2?grpBuildConfirmText():grpBuildText();
   let ok=false;
   try{await navigator.clipboard.writeText(text);ok=true;}catch(e){
     const pv=document.getElementById('grpPreview');
