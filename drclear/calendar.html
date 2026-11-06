@@ -417,6 +417,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .staff-add-row input{flex:1;}
 .staff-add-row select{flex-shrink:0;width:110px;}
 .staff-empty{font-size:12.5px;color:var(--text-muted);padding:6px 2px;}
+/* ══════════ GROUP MESSAGE ══════════ */
+.grp-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start;}
+@media(max-width:900px){.grp-layout{grid-template-columns:1fr;}}
+.grp-form{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;}
+.grp-pick{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px dashed var(--border);}
+.grp-sec{font-size:12.5px;font-weight:800;color:var(--primary);margin:14px 0 8px;}
+.grp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;}
+.grp-grid label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--text-muted);}
+.grp-grid label.span2{grid-column:span 2;}
+.grp-preview-col{position:sticky;top:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+.grp-preview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-weight:800;font-size:14px;flex-wrap:wrap;}
+.grp-preview{width:100%;min-height:520px;resize:vertical;border:1px solid var(--border);border-radius:10px;padding:12px;
+  font-family:inherit;font-size:13px;line-height:1.55;background:var(--bg);color:var(--text);box-sizing:border-box;}
 /* ══════════ STATS ══════════ */
 .stats-sec-title{font-size:14px;font-weight:800;margin:4px 0 10px;}
 .stats-today-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:22px;}
@@ -603,6 +616,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <button class="nav-btn" id="nav-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
     <button class="nav-btn" id="nav-terms"    onclick="showPage('terms')">🎯 ชอตเทอม</button>
     <button class="nav-btn" id="nav-stats"    onclick="showPage('stats')">📊 สถิติ</button>
+    <button class="nav-btn" id="nav-group"    onclick="showPage('group')">📨 ส่งกลุ่ม</button>
     <button class="nav-btn" id="nav-links"    onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="nav-btn" id="nav-settings"  onclick="showPage('settings')">⚙️ ตั้งค่า</button>
   </div>
@@ -624,6 +638,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
     <button class="side-nav-item" id="side-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
     <button class="side-nav-item" id="side-terms" onclick="showPage('terms')">🎯 ชอตเทอม</button>
     <button class="side-nav-item" id="side-stats" onclick="showPage('stats')">📊 สถิติ</button>
+    <button class="side-nav-item" id="side-group" onclick="showPage('group')">📨 ส่งกลุ่ม</button>
     <button class="side-nav-item" id="side-links" onclick="showPage('links')">🔗 รวมลิงก์</button>
     <button class="side-nav-item" id="side-settings" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
     <div class="sidebar-heading" style="margin-top:20px;">✅ งานวันนี้</div>
@@ -727,6 +742,64 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
       <button class="btn-today" onclick="statsShiftMonth(0)">เดือนนี้</button>
     </div>
     <div id="statsMonth"></div>
+  </div>
+</div>
+
+<!-- ══════════ GROUP MESSAGE PAGE ══════════ -->
+<div class="page" id="page-group">
+  <div class="settings-wrap terms-wrap">
+    <div class="settings-title">ส่งกลุ่ม</div>
+    <div class="settings-subtitle">เลือกลูกค้า ระบบจะเติมข้อมูลลงเทมเพลตให้อัตโนมัติ ช่องที่ยังไม่มีพิมพ์เพิ่มได้ แล้วกด "คัดลอก" ไปวางในกลุ่ม (ข้อมูลที่พิมพ์จะถูกบันทึกเก็บไว้กับนัดนั้น)</div>
+    <div class="grp-layout">
+      <div class="grp-form" id="grpForm" oninput="grpUpdatePreview()" onchange="grpUpdatePreview()">
+        <div class="grp-pick">
+          <input class="form-input" id="grpSearch" placeholder="🔍 ค้นหาชื่อ / เบอร์โทร..." oninput="event.stopPropagation();grpRenderPicker()">
+          <select class="form-select" id="grpApt" onchange="event.stopPropagation();grpLoadApt(this.value)"></select>
+        </div>
+        <div class="grp-sec">ข้อมูลลูกค้า</div>
+        <div class="grp-grid">
+          <label>Name<input class="form-input" id="gName"></label>
+          <label>DOB<input class="form-input" id="gDob" placeholder="เช่น 27/06/1986"></label>
+          <label>Contact<input class="form-input" id="gPhone"></label>
+          <label>Email<input class="form-input" id="gEmail"></label>
+          <label>Line ID<input class="form-input" id="gLine"></label>
+          <label class="span2">Address<input class="form-input" id="gAddress"></label>
+        </div>
+        <div class="grp-sec">Payment detail</div>
+        <div class="grp-grid">
+          <label>payment date<input class="form-input" type="date" id="gPayDate"></label>
+          <label>payment deposit<input class="form-input" type="number" id="gDeposit" placeholder="เช่น 1000"></label>
+          <label class="span2">payment channel<input class="form-input" id="gPayChannel" placeholder="เช่น Bank Transfer by (Clear Aligners)"></label>
+        </div>
+        <div class="grp-sec">Promotion / Treatment</div>
+        <div class="grp-grid">
+          <label class="span2">Promotion<input class="form-input" id="gPromo" placeholder="เช่น Pro.59,900 + Free Retainer 1Set +Dis3,500"></label>
+          <label class="span2">Treatment<input class="form-input" id="gTreatment" placeholder="เช่น Consult+CA 1st scan"></label>
+        </div>
+        <div class="grp-sec">Booking date</div>
+        <div class="grp-grid">
+          <label>1st Appt date<input class="form-input" type="date" id="gDate"></label>
+          <label>Time<input class="form-input" type="time" id="gTime"></label>
+          <label class="span2">At (สาขา)<input class="form-input" id="gBranch" placeholder="เช่น สาขา C smile dental clinic (อุบลราชธานี)"></label>
+          <label class="span2">Note<textarea class="form-textarea" id="gNote" rows="2"></textarea></label>
+        </div>
+        <div class="grp-sec">อื่นๆ</div>
+        <div class="grp-grid">
+          <label class="span2">Chanel<input class="form-input" id="gChannel" placeholder="เช่น FB Dr Clear Aligners (ชื่อเพจ/แอดมิน)"></label>
+          <label class="span2">Sales in Charge<input class="form-input" id="gSales" placeholder="ชื่อเซลล์"></label>
+        </div>
+      </div>
+      <div class="grp-preview-col">
+        <div class="grp-preview-head">
+          <span>ข้อความที่จะส่ง</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-export-summary" onclick="grpSave(true)">💾 บันทึก</button>
+            <button class="btn-new-apt" onclick="grpCopy()">📋 คัดลอก</button>
+          </div>
+        </div>
+        <textarea class="grp-preview" id="grpPreview" readonly></textarea>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2235,6 +2308,7 @@ function showPage(name){
   if(name==='links'){cancelAddLink();renderLinksPage();}
   if(name==='terms'){renderTermsPage();}
   if(name==='stats'){renderStatsPage();}
+  if(name==='group'){grpRenderPicker();}
   if(name==='settings'){
     populateColorInputs(loadStatusColors());populateProcColorInputs(loadProcColors());populateKpiTargetInputs(loadKpiTargets());applySettingsCardCollapse();
     cancelEditPkg();renderPkgList();
@@ -2355,6 +2429,137 @@ function updateStats(){
 // คำนวณจากข้อมูลนัดหมายที่เก็บอยู่แล้ว จึงดูย้อนหลังได้ทุกเดือน
 //  - Appointment / Scan Done / Commence = จำนวนที่ติ๊กสำเร็จในวันนั้น (milestone_dates)
 //  - ยอดขาย = รวมราคาของนัดที่วันนัดตรงกับวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
+// ─── 📨 ส่งกลุ่ม: เติมเทมเพลตข้อความส่งกลุ่มจากข้อมูลนัดหมายอัตโนมัติ ───
+// ช่องที่มีอยู่แล้วในนัด (ชื่อ เบอร์ อีเมล ไลน์ ที่อยู่ วันเวลานัด หมายเหตุ) ดึงมาเลย
+// ช่องเพิ่มเติม (DOB, การชำระเงิน, โปร, สาขา, ช่องทาง, เซลล์) เก็บใน report_info ของนัดนั้น
+// ช่อง payment channel / สาขา / Chanel / Sales จำค่าที่ใช้ล่าสุดไว้เป็นค่าเริ่มต้นให้นัดถัดไป
+let grpCurrentId=null;
+const EN_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtEnDate(s){
+  if(!s)return '';
+  const d=new Date(String(s).slice(0,10)+'T00:00:00');
+  if(isNaN(d))return String(s);
+  return `${d.getDate()} ${EN_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function grpDefaultsKey(){return 'grpDefaults_'+(currentUser?currentUser.id:'anon');}
+function grpLoadDefaults(){try{return JSON.parse(localStorage.getItem(grpDefaultsKey())||'{}');}catch(e){return {};}}
+function grpSaveDefaults(d){try{localStorage.setItem(grpDefaultsKey(),JSON.stringify(d));}catch(e){}}
+function grpRenderPicker(){
+  const sel=document.getElementById('grpApt');
+  if(!sel)return;
+  const q=(document.getElementById('grpSearch').value||'').trim().toLowerCase();
+  const list=viewApts()
+    .filter(a=>!q||(a.patient_name||'').toLowerCase().includes(q)||(a.phone||'').includes(q))
+    .slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.time||'').localeCompare(a.time||''));
+  sel.innerHTML='<option value="">– เลือกลูกค้า ('+list.length+' รายการ) –</option>'+list.map(a=>
+    `<option value="${a.id}">${a.date?fmtDateShort(a.date):'-'} · ${escHtml(a.patient_name)}${a.phone?' · '+escHtml(a.phone):''}</option>`).join('');
+  if(grpCurrentId&&list.some(a=>a.id===grpCurrentId)) sel.value=grpCurrentId;
+  else if(!grpCurrentId) grpLoadApt('');
+}
+function grpSet(id,v){const el=document.getElementById(id);if(el)el.value=v==null?'':v;}
+function grpGet(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+function grpLoadApt(id){
+  grpCurrentId=id||null;
+  const a=id?allApts.find(x=>x.id===id):null;
+  const ri=(a&&a.report_info)||{};
+  const def=grpLoadDefaults();
+  const pkg=a&&a.price?pricePackages.find(p=>Number(p.price)===Number(a.price)):null;
+  const srcShort={facebook:'FB',instagram:'IG',line:'LINE OA',google:'Google',walkin:'Walk-in',referral:'บอกต่อ',other:'อื่นๆ'};
+  grpSet('gName',a?a.patient_name:'');
+  grpSet('gDob',ri.dob);
+  grpSet('gPhone',a?a.phone:'');
+  grpSet('gEmail',a?a.email:'');
+  grpSet('gLine',a?a.line_id:'');
+  grpSet('gAddress',a?a.address:'');
+  grpSet('gPayDate',ri.pay_date||(a?todayStr():''));
+  grpSet('gDeposit',ri.deposit);
+  grpSet('gPayChannel',ri.pay_channel!=null?ri.pay_channel:(def.pay_channel||''));
+  grpSet('gPromo',ri.promotion!=null?ri.promotion:(pkg?pkg.name:(a&&a.price?'Pro.'+Number(a.price).toLocaleString():'')));
+  grpSet('gTreatment',ri.treatment!=null?ri.treatment:(a?(PROC_LABELS[a.procedure_type]||''):''));
+  grpSet('gDate',a?a.date:'');
+  grpSet('gTime',a&&a.time?String(a.time).slice(0,5):'');
+  grpSet('gBranch',ri.branch!=null?ri.branch:(def.branch||''));
+  grpSet('gNote',a?a.notes:'');
+  grpSet('gChannel',ri.channel!=null?ri.channel:(def.channel||((a&&a.source&&srcShort[a.source])?srcShort[a.source]:'')));
+  grpSet('gSales',ri.sales!=null?ri.sales:(def.sales||''));
+  grpUpdatePreview();
+}
+function grpBuildText(){
+  const v=id=>grpGet(id)||'-';
+  const dep=grpGet('gDeposit');
+  const time=grpGet('gTime');
+  return [
+    `Name: ${v('gName')}`,
+    `DOB : ${v('gDob')}`,
+    `Contact : ${v('gPhone')}`,
+    `Email: ${v('gEmail')}`,
+    `Line ID: ${v('gLine')}`,
+    `Address : ${v('gAddress')}`,
+    ``,``,
+    `Payment detail`,
+    `payment date : ${grpGet('gPayDate')?fmtEnDate(grpGet('gPayDate')):'-'}`,
+    `payment deposit : ${dep?Number(dep).toLocaleString():'-'}`,
+    `payment channel:  ${v('gPayChannel')}`,
+    ``,
+    `Promotion`,
+    `${v('gPromo')}`,
+    ``,
+    `Treatment : ${v('gTreatment')}`,
+    ``,
+    `Booking date`,
+    `👉🏻1st Appt date :  ${grpGet('gDate')?fmtEnDate(grpGet('gDate')):'-'}  Time ${time?time.replace(':','.')+'น.':'-'}   At  ${v('gBranch')}`,
+    `Note`,
+    `${v('gNote')}`,
+    ``,
+    `Chanel : ${v('gChannel')}`,
+    `--------------------------`,
+    `Sales in Charge :${v('gSales')}`,
+  ].join('\n');
+}
+function grpUpdatePreview(){
+  const pv=document.getElementById('grpPreview');
+  if(pv)pv.value=grpBuildText();
+}
+function grpSave(showToast){
+  // จำค่าที่มักใช้ซ้ำไว้เป็นค่าเริ่มต้น
+  const def=grpLoadDefaults();
+  ['gPayChannel:pay_channel','gBranch:branch','gSales:sales','gChannel:channel'].forEach(pair=>{
+    const [id,k]=pair.split(':');const val=grpGet(id);if(val)def[k]=val;
+  });
+  grpSaveDefaults(def);
+  if(!grpCurrentId){if(showToast)toast('ยังไม่ได้เลือกลูกค้า — จำค่าเริ่มต้นไว้ให้แล้ว','info');return;}
+  const idx=allApts.findIndex(a=>a.id===grpCurrentId);
+  if(idx<0)return;
+  const a=Object.assign({},allApts[idx]);
+  const name=grpGet('gName');if(name)a.patient_name=name;
+  a.phone=grpGet('gPhone')||null;
+  a.email=grpGet('gEmail')||null;
+  a.line_id=grpGet('gLine')||null;
+  a.address=grpGet('gAddress')||null;
+  if(grpGet('gDate'))a.date=grpGet('gDate');
+  if(grpGet('gTime'))a.time=grpGet('gTime')+':00';
+  a.notes=grpGet('gNote')||null;
+  a.report_info={
+    dob:grpGet('gDob'),pay_date:grpGet('gPayDate'),deposit:grpGet('gDeposit'),
+    pay_channel:grpGet('gPayChannel'),promotion:grpGet('gPromo'),treatment:grpGet('gTreatment'),
+    branch:grpGet('gBranch'),channel:grpGet('gChannel'),sales:grpGet('gSales'),
+  };
+  allApts[idx]=a;
+  saveAppointments();
+  try{renderList();renderCalendar();updateStats();renderTodoPanel();}catch(e){}
+  if(showToast)toast('บันทึกข้อมูลแล้ว ✅','success');
+}
+async function grpCopy(){
+  const text=grpBuildText();
+  let ok=false;
+  try{await navigator.clipboard.writeText(text);ok=true;}catch(e){
+    const pv=document.getElementById('grpPreview');
+    if(pv){pv.removeAttribute('readonly');pv.select();try{ok=document.execCommand('copy');}catch(_){}pv.setAttribute('readonly','');}
+  }
+  grpSave(false);
+  toast(ok?'คัดลอกแล้ว ✅ ไปวางในกลุ่มได้เลย':'คัดลอกไม่สำเร็จ — กดค้างที่ข้อความแล้วคัดลอกเอง',ok?'success':'error');
+}
+
 let statsMonthKey=null;
 function statsShiftMonth(n){
   if(n===0||!statsMonthKey){statsMonthKey=currentMonthKey();}
@@ -3156,6 +3361,8 @@ function finalizeSaveApt(name,date,time,existingApt,ownerId,formMilestones,newMi
     // status dropdown changes, but staff can manually correct a wrong one) — this
     // lets a mistaken milestone be un-counted without touching raw data.
     milestones:formMilestones,
+    // ข้อมูลเพิ่มเติมสำหรับข้อความส่งกลุ่ม (หน้า 📨 ส่งกลุ่ม) — เก็บไว้ไม่ให้หายตอนแก้นัดจากฟอร์มนี้
+    report_info:(existingApt&&existingApt.report_info)||null,
   };
   // milestone_dates เก็บ "วันที่ติ๊กสำเร็จจริง" ของแต่ละขั้น แยกจากวันนัดหมาย (date)
   // — ใหม่ที่เพิ่งติ๊ก (เดิม false → ตอนนี้ true) ใช้วันที่ที่เลือกจากป็อปอัพ (newMilestoneDate)
