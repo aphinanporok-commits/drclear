@@ -427,6 +427,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .grp-grid label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--text-muted);}
 .grp-grid label.span2{grid-column:span 2;}
 .grp-preview-col{position:sticky;top:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+.grp-reset-btn{background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:9px;
+  padding:8px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.grp-reset-btn:hover{border-color:var(--danger);color:var(--danger);}
 .grp-preview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-weight:800;font-size:14px;flex-wrap:wrap;}
 .grp-preview{width:100%;min-height:520px;resize:vertical;border:1px solid var(--border);border-radius:10px;padding:12px;
   font-family:inherit;font-size:13px;line-height:1.55;background:var(--bg);color:var(--text);box-sizing:border-box;}
@@ -793,6 +796,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="grp-preview-head">
           <span>ข้อความที่จะส่ง</span>
           <div style="display:flex;gap:8px;">
+            <button class="grp-reset-btn" onclick="grpReset()">🔄 กรอกใหม่</button>
             <button class="btn-export-summary" onclick="grpSave(true)">💾 บันทึก</button>
             <button class="btn-new-apt" onclick="grpCopy()">📋 คัดลอก</button>
           </div>
@@ -2483,6 +2487,18 @@ function grpLoadApt(id){
   grpSet('gChannel',ri.channel!=null?ri.channel:(def.channel||((a&&a.source&&srcShort[a.source])?srcShort[a.source]:'')));
   grpSet('gSales',ri.sales!=null?ri.sales:(def.sales||''));
   grpUpdatePreview();
+}
+// 🔄 กรอกใหม่: ล้างฟอร์มทั้งหมด + ยกเลิกการเลือกลูกค้า (ข้อมูลที่บันทึกไว้กับนัดเดิมไม่ถูกลบ)
+function grpReset(){
+  grpCurrentId=null;
+  const s=document.getElementById('grpSearch');if(s)s.value='';
+  document.querySelectorAll('#grpForm input:not(#grpSearch), #grpForm textarea').forEach(el=>{el.value='';});
+  grpRenderPicker();
+  const sel=document.getElementById('grpApt');if(sel)sel.value='';
+  grpUpdatePreview();
+  window.scrollTo({top:0,behavior:'smooth'});
+  const main=document.querySelector('.app-main');if(main)main.scrollTo({top:0,behavior:'smooth'});
+  toast('ล้างฟอร์มแล้ว เริ่มกรอกใหม่ได้เลย','info');
 }
 function grpBuildText(){
   const v=id=>grpGet(id)||'-';
