@@ -245,6 +245,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .apt-card-date{font-size:10px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums;}
 .apt-card-info{min-width:0;}
 .apt-card-name{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.apt-owner-tag{font-size:10.5px;font-weight:700;color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,transparent);
+  padding:2px 7px;border-radius:10px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;}
 .apt-card-sub{font-size:11.5px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
 .apt-card-note{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
 .apt-card-note:hover{color:var(--primary);}
@@ -360,6 +362,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .side-nav-item.active{background:color-mix(in srgb,var(--primary) 14%,var(--surface));color:var(--primary);}
 .app-main{flex:1;overflow-y:auto;background:var(--bg);min-width:0;}
 @media(max-width:820px){.sidebar{display:none;}}
+.viewer-picker-wrap{margin-bottom:16px;}
+.viewer-picker{width:100%;padding:8px 10px;border:1.5px solid var(--primary);border-radius:9px;background:var(--surface);
+  color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
 /* จอใหญ่มีเมนูด้านซ้ายแล้ว จึงซ่อนปุ่มเมนูบนแถบด้านบน (จอมือถือยังแสดงเพราะไม่มีเมนูซ้าย) */
 @media(min-width:821px){.navbar-nav{display:none;}.navbar-user{margin-left:auto;border-left:none;}}
 
@@ -610,6 +615,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 
 <div class="app-shell">
   <aside class="sidebar">
+    <div class="viewer-picker-wrap" id="viewerPickerWrap" style="display:none">
+      <div class="sidebar-heading">👁 ดูข้อมูลของ</div>
+      <select class="viewer-picker" id="viewerPicker" onchange="setViewOwner(this.value)"></select>
+    </div>
     <div class="sidebar-heading">เมนูหลัก</div>
     <button class="side-nav-item" id="side-list" onclick="showPage('list')">📋 รายการทั้งหมด</button>
     <button class="side-nav-item" id="side-calendar" onclick="showPage('calendar')">📅 ปฏิทิน</button>
@@ -1849,6 +1858,55 @@ try{localStorage.removeItem('allApts');}catch(e){} // ลบแคชรวม�
 let currentUser=null;
 let allApts=loadAppointments();
 
+// ─── มุมมองของแอดมิน: เลือกดูข้อมูล "ทั้งหมด" หรือทีละคน ───
+// viewApts() = รายการที่ใช้แสดงผล (รายการ, ปฏิทิน, KPI, สถิติ, งานวันนี้, export)
+// ownApts()  = เฉพาะของบัญชีที่ล็อกอินอยู่ (ใช้กับหน้าชอตเทอม — แยกของใครของมันเสมอ)
+let viewOwner='all';
+let staffUsers=[];
+function viewApts(){
+  if(!isAdmin||viewOwner==='all') return allApts;
+  return allApts.filter(a=>a.owner_id===viewOwner);
+}
+function ownApts(){
+  if(!currentUser) return allApts;
+  return allApts.filter(a=>!a.owner_id||a.owner_id===currentUser.id);
+}
+async function loadViewerPicker(){
+  const wrap=document.getElementById('viewerPickerWrap');
+  const sel=document.getElementById('viewerPicker');
+  if(!wrap||!sel)return;
+  if(!isAdmin||!sb){wrap.style.display='none';viewOwner='all';return;}
+  try{
+    const {data,error}=await sb.rpc('admin_staff_users');
+    if(error){console.error('admin_staff_users failed',error);}
+    else staffUsers=data||[];
+  }catch(e){console.error(e);}
+  let saved='all';
+  try{saved=localStorage.getItem('viewOwner_'+currentUser.id)||'all';}catch(e){}
+  if(saved!=='all'&&!staffUsers.some(u=>u.id===saved)) saved='all';
+  viewOwner=saved;
+  sel.innerHTML='<option value="all">👥 ทุกคน (รวม)</option>'+staffUsers.map(u=>
+    `<option value="${u.id}">${escHtml(u.name||u.email)}${u.id===currentUser.id?' (ฉัน)':''}</option>`).join('');
+  sel.value=viewOwner;
+  wrap.style.display='';
+  refreshAfterViewChange();
+}
+function setViewOwner(v){
+  viewOwner=v||'all';
+  try{localStorage.setItem('viewOwner_'+currentUser.id,viewOwner);}catch(e){}
+  refreshAfterViewChange();
+}
+function refreshAfterViewChange(){
+  try{
+    renderStatusTabs();renderList();renderCalendar();updateStats();renderTodoPanel();
+    if(typeof selectedDate!=='undefined'&&selectedDate)openDayPanel(selectedDate);
+  }catch(e){console.error(e);}
+}
+function ownerLabel(ownerId){
+  const u=staffUsers.find(x=>x.id===ownerId);
+  return u?(u.name||u.email):'';
+}
+
 // ─── Supabase cloud sync (optional — falls back to localStorage only) ───
 const SUPABASE_URL='https://osqtunzfynskpwdymqiv.supabase.co';
 const SUPABASE_KEY='sb_publishable_lH_q9VqXzGGHD9WMhs_1rQ_4w6lxZgm';
@@ -1935,6 +1993,8 @@ async function initAuth(){
       currentUser=null;
       isAdmin=false;
       allApts=[];
+      viewOwner='all';staffUsers=[];
+      const vpw=document.getElementById('viewerPickerWrap');if(vpw)vpw.style.display='none';
       afterLoginDone=false;
       if(!blockedMessageActive) showAuthGate();
     }
@@ -1965,6 +2025,7 @@ let afterLoginDone=false;
 function afterLogin(){
   if(afterLoginDone)return; // avoid double-init if onAuthStateChange fires again after getSession
   afterLoginDone=true;
+  loadViewerPicker();
   renderTodoPanel();
   showPage('list');
   pullFromSupabaseOnLoad();
@@ -2246,9 +2307,9 @@ function milestoneDate(a,key){
 }
 function updateStats(){
   const counts={
-    msAppointment:allApts.filter(a=>a.milestones&&a.milestones.msAppointment&&isInCurrentMonth(milestoneDate(a,'msAppointment'))).length,
-    msScanDone:allApts.filter(a=>a.milestones&&a.milestones.msScanDone&&isInCurrentMonth(milestoneDate(a,'msScanDone'))).length,
-    msCommence:allApts.filter(a=>a.milestones&&a.milestones.msCommence&&isInCurrentMonth(milestoneDate(a,'msCommence'))).length,
+    msAppointment:viewApts().filter(a=>a.milestones&&a.milestones.msAppointment&&isInCurrentMonth(milestoneDate(a,'msAppointment'))).length,
+    msScanDone:viewApts().filter(a=>a.milestones&&a.milestones.msScanDone&&isInCurrentMonth(milestoneDate(a,'msScanDone'))).length,
+    msCommence:viewApts().filter(a=>a.milestones&&a.milestones.msCommence&&isInCurrentMonth(milestoneDate(a,'msCommence'))).length,
   };
   const targets=loadKpiTargets();
   MILESTONE_ORDER.forEach(key=>{
@@ -2268,7 +2329,7 @@ function updateStats(){
   });
   // ยอดขาย = รวมราคาของทุกนัดหมายที่ใส่ราคาไว้ และวันนัดอยู่ในเดือนนี้ (นับเดือนต่อเดือน — ขึ้นเดือนใหม่เริ่ม 0)
   // ไม่นับรายการที่สถานะ "ยกเลิก"
-  const revenue=allApts
+  const revenue=viewApts()
     .filter(a=>a.status!=='cancelled'&&isInCurrentMonth(a.date))
     .reduce((s,a)=>s+(Number(a.price)||0),0);
   const revEl=document.getElementById('statRevenue');
@@ -2308,7 +2369,7 @@ function statsForDays(days){
   // days: Set ของวันที่ 'YYYY-MM-DD' → คืนค่าสถิติแยกรายวัน
   const res={};
   days.forEach(d=>{res[d]={apts:0,msAppointment:0,msScanDone:0,msCommence:0,revenue:0,cancelled:0};});
-  allApts.forEach(a=>{
+  viewApts().forEach(a=>{
     const d=a.date?String(a.date).slice(0,10):null;
     if(d&&res[d]){
       if(a.status==='cancelled') res[d].cancelled++;
@@ -2402,9 +2463,9 @@ function renderTermsPage(){
   ];
   const valueOf=(metric,t)=>{
     if(metric.key==='revenue'){
-      return allApts.filter(a=>a.status!=='cancelled'&&inRange(a.date,t)).reduce((s,a)=>s+(Number(a.price)||0),0);
+      return ownApts().filter(a=>a.status!=='cancelled'&&inRange(a.date,t)).reduce((s,a)=>s+(Number(a.price)||0),0);
     }
-    return allApts.filter(a=>a.milestones&&a.milestones[metric.key]&&inRange(milestoneDate(a,metric.key),t)).length;
+    return ownApts().filter(a=>a.milestones&&a.milestones[metric.key]&&inRange(milestoneDate(a,metric.key),t)).length;
   };
   const fmt=(v,money)=>money?'฿'+Math.round(v).toLocaleString():String(v);
   const anyTarget=metrics.some(mt=>targets[mt.key]>0);
@@ -2457,7 +2518,7 @@ function renderTermsPage(){
     </div>`;
   }).join('');
   document.getElementById('termsSubtitle').textContent=
-    `เดือน ${thMonthYearLabel(mk)} · แบ่งเป้าหมายเป็น 3 ช่วง ช่วงละ 10 วัน (เป้าทั้งเดือน ÷ 3) — ช่วงไหนทำไม่ถึงเป้า ส่วนที่ขาดจะยกไปบวกในช่วงถัดไป`;
+    `${isAdmin?'ข้อมูลของฉันเท่านั้น · ':''}เดือน ${thMonthYearLabel(mk)} · แบ่งเป้าหมายเป็น 3 ช่วง ช่วงละ 10 วัน (เป้าทั้งเดือน ÷ 3) — ช่วงไหนทำไม่ถึงเป้า ส่วนที่ขาดจะยกไปบวกในช่วงถัดไป`;
   box.innerHTML=`<div class="terms-grid">${cards}</div>`+
     (anyTarget?'':`<div class="terms-hint">ยังไม่ได้ตั้งเป้าหมายของเดือนนี้ — ไปที่ ⚙️ ตั้งค่า → เป้าหมาย KPI (ของฉัน) เพื่อให้ระบบแบ่งเป้าเป็น 3 ช่วงให้</div>`);
 }
@@ -2574,7 +2635,7 @@ async function removeStaffMember(id,email){
 function renderStatusTabs(){
   const counts={all:0};
   activeStatuses.forEach(k=>counts[k]=0);
-  allApts.forEach(a=>{counts.all++;if(counts[a.status]!==undefined)counts[a.status]++;});
+  viewApts().forEach(a=>{counts.all++;if(counts[a.status]!==undefined)counts[a.status]++;});
   const tabs=[{k:'all',label:'ทั้งหมด'}].concat(activeStatuses.map(k=>({k,label:STATUS_PLAIN[k]||k})));
   if(activeFilter!=='all'&&!activeStatuses.includes(activeFilter)) activeFilter='all';
   const sel=document.getElementById('statusFilterSel');
@@ -2589,7 +2650,7 @@ function listFilterChanged(){listPage=1;renderList();}
 // ─── List render ──────────────────────────────────────
 function getFiltered(){
   const q=(document.getElementById('listSearch').value||'').toLowerCase();
-  let arr=allApts.filter(a=>{
+  let arr=viewApts().filter(a=>{
     const ms=activeFilter==='all'||a.status===activeFilter;
     const mq=!q||a.patient_name.toLowerCase().includes(q)||(a.phone||'').includes(q)||(PROC_LABELS[a.procedure_type]||'').toLowerCase().includes(q);
     return ms&&mq;
@@ -2690,6 +2751,7 @@ function aptCard(apt,showDate){
         ${dateBadge}
         <span style="font-size:13.5px;font-weight:700;">${apt.time?apt.time.slice(0,5):'--:--'}</span>
         <span class="apt-card-name" style="max-width:220px;">${apt.patient_name}</span>
+        ${isAdmin&&viewOwner==='all'&&ownerLabel(apt.owner_id)?`<span class="apt-owner-tag">👤 ${escHtml(ownerLabel(apt.owner_id))}</span>`:''}
       </div>
       <div class="apt-card-sub">
         <span class="proc-badge" style="padding:1px 6px;border-radius:5px;font-size:10.5px;font-weight:700;">${PROC_LABELS[apt.procedure_type]||apt.procedure_type}</span>
@@ -2779,9 +2841,9 @@ function renderTodoPanel(){
   const box=document.getElementById('todoPanel');
   if(!box)return;
   const td=todayStr();
-  const todays=allApts.filter(a=>a.date===td).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const todays=viewApts().filter(a=>a.date===td).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   // ต้องติดต่อ = เฉพาะรายการที่ตั้งวันติดต่อไว้ตรงกับวันนี้เท่านั้น (ไม่เอาที่เลยกำหนดแล้ว) ไม่รวมที่ยกเลิก
-  const followups=allApts
+  const followups=viewApts()
     .filter(a=>a.followup_date&&String(a.followup_date).slice(0,10)===td&&a.status!=='cancelled')
     .sort((a,b)=>(a.patient_name||'').localeCompare(b.patient_name||''));
   let html='';
@@ -2846,7 +2908,7 @@ function renderCalendar(){
   const dim=new Date(y,m+1,0).getDate();
   const dip=new Date(y,m,0).getDate();
   const td=todayStr();
-  const aptMap={};allApts.forEach(a=>{(aptMap[a.date]=aptMap[a.date]||[]).push(a);});
+  const aptMap={};viewApts().forEach(a=>{(aptMap[a.date]=aptMap[a.date]||[]).push(a);});
   for(let i=0;i<42;i++){
     const cell=document.createElement('div');cell.className='cal-cell';
     let s,isOther=false;
@@ -2961,7 +3023,7 @@ function openDayPanel(s){
   const d=new Date(s+'T00:00:00');
   document.getElementById('dayPanelTitle').textContent=`${DAY_NAMES[d.getDay()]} ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
   document.getElementById('btnAddDay').onclick=()=>openModal(s);
-  const apts=allApts.filter(a=>a.date===s).sort((a,b)=>a.time.localeCompare(b.time));
+  const apts=viewApts().filter(a=>a.date===s).sort((a,b)=>a.time.localeCompare(b.time));
   const body=document.getElementById('dayPanelBody');
   if(!apts.length){
     body.innerHTML=`<div class="panel-empty"><div class="panel-empty-icon">📅</div>ไม่มีนัดหมายวันนี้</div>`;
@@ -3193,8 +3255,8 @@ function exportExcel(){
     toast('ไม่สามารถโหลดไลบรารี Excel ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่','error');
     return;
   }
-  if(!allApts.length){toast('ไม่มีข้อมูลนัดหมายให้ export','error');return;}
-  const rows=allApts.slice().sort((a,b)=>a.date===b.date?(a.time||'').localeCompare(b.time||''):a.date.localeCompare(b.date))
+  if(!viewApts().length){toast('ไม่มีข้อมูลนัดหมายให้ export','error');return;}
+  const rows=viewApts().slice().sort((a,b)=>a.date===b.date?(a.time||'').localeCompare(b.time||''):a.date.localeCompare(b.date))
     .map(a=>({
       'วันที่':fmtDate(a.date),
       'เวลา':a.time?a.time.slice(0,5):'',
@@ -3227,7 +3289,7 @@ function escapeHtml(s){
   return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function followupSummaryRows(){
-  return allApts.slice().sort((a,b)=>{
+  return viewApts().slice().sort((a,b)=>{
     const fa=a.followup_date||'9999-99-99', fb=b.followup_date||'9999-99-99';
     return fa.localeCompare(fb) || a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'');
   });
@@ -3237,7 +3299,7 @@ function exportFollowupExcel(){
     toast('ไม่สามารถโหลดไลบรารี Excel ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่','error');
     return;
   }
-  if(!allApts.length){toast('ไม่มีข้อมูลนัดหมายให้สรุป','error');return;}
+  if(!viewApts().length){toast('ไม่มีข้อมูลนัดหมายให้สรุป','error');return;}
   const rows=followupSummaryRows().map((a,i)=>({
     '#':i+1,
     'ชื่อลูกค้า':a.patient_name||'',
@@ -3261,7 +3323,7 @@ async function exportFollowupPDF(){
     toast('ไม่สามารถโหลดไลบรารีสร้าง PDF ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่','error');
     return;
   }
-  if(!allApts.length){toast('ไม่มีข้อมูลนัดหมายให้สรุป','error');return;}
+  if(!viewApts().length){toast('ไม่มีข้อมูลนัดหมายให้สรุป','error');return;}
   const rows=followupSummaryRows();
   const container=document.createElement('div');
   container.style.cssText='position:fixed;left:-99999px;top:0;width:980px;background:#fff;font-family:Sarabun,sans-serif;padding:28px;color:#1a1a1a;';
