@@ -702,10 +702,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="stat-card-value"><span id="statMsCommence">–</span><span class="stat-card-value-target" id="targetLabelMsCommence"></span></div>
         <div class="stat-card-bar" id="barWrapMsCommence" style="display:none"><div class="stat-card-bar-fill" id="barMsCommence" style="background:var(--status-msCommence)"></div></div>
       </div>
-      <div class="stat-card" style="border-left-color:#E67E22" title="ค่ารักษาของนัดในเดือนนี้ + มัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในเดือนนี้ (ไม่นับที่ยกเลิก)">
+      <div class="stat-card" style="border-left-color:#E67E22" title="เงินมัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในเดือนนี้ (ไม่นับที่ยกเลิก)">
         <div class="stat-card-label">ยอดขาย</div>
         <div class="stat-card-value"><span id="statRevenue">–</span><span class="stat-card-value-target" id="targetLabelRevenue"></span></div>
-        <div id="revenueBreakdown" style="font-size:11px;line-height:1.3;color:#888;margin-top:2px"></div>
         <div class="stat-card-bar" id="barWrapRevenue" style="display:none"><div class="stat-card-bar-fill" id="barRevenue" style="background:#E67E22"></div></div>
       </div>
     </div>
@@ -2444,23 +2443,12 @@ function updateStats(){
       if(barWrapEl) barWrapEl.style.display='none';
     }
   });
-  // ยอดขาย = รวมราคาของนัดหมายที่วันนัดอยู่ในเดือนนี้ + มัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในเดือนนี้
-  // (นับเดือนต่อเดือน — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่สถานะ "ยกเลิก"
-  const revTreatment=viewApts()
-    .filter(a=>a.status!=='cancelled'&&isInCurrentMonth(a.date))
-    .reduce((s,a)=>s+(Number(a.price)||0),0);
-  const revDepositCount=viewApts().filter(a=>hasDeposit(a)&&isInCurrentMonth(depositDate(a))).length;
-  const revDeposit=revDepositCount*DEPOSIT_AMOUNT;
-  const revenue=revTreatment+revDeposit;
+  // ยอดขาย = เฉพาะเงินมัดจำที่รับจริง: 1,000 ต่อ 1 นัดที่ติ๊ก Appointment ในเดือนนี้
+  // (นับจากเดือนที่ติ๊ก Appointment จริง — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่ยกเลิก
+  const revenue=viewApts().filter(a=>hasDeposit(a)&&isInCurrentMonth(depositDate(a))).length*DEPOSIT_AMOUNT;
   const revEl=document.getElementById('statRevenue');
   if(revEl){
     revEl.textContent='฿'+revenue.toLocaleString();
-    const bd=document.getElementById('revenueBreakdown');
-    if(bd){
-      bd.textContent=revDepositCount>0
-        ? 'ค่ารักษา ฿'+revTreatment.toLocaleString()+' + มัดจำ ฿'+revDeposit.toLocaleString()+' ('+revDepositCount+' ราย)'
-        : 'ค่ารักษา ฿'+revTreatment.toLocaleString();
-    }
     const rt=targets.revenue;
     const lbl=document.getElementById('targetLabelRevenue'),wrap=document.getElementById('barWrapRevenue'),bar=document.getElementById('barRevenue');
     if(rt&&rt>0){
@@ -2480,7 +2468,7 @@ function updateStats(){
 // ─── สถิติ: สรุปวันนี้ + ตารางรายวันทั้งเดือน ───
 // คำนวณจากข้อมูลนัดหมายที่เก็บอยู่แล้ว จึงดูย้อนหลังได้ทุกเดือน
 //  - Appointment / Scan Done / Commence = จำนวนที่ติ๊กสำเร็จในวันนั้น (milestone_dates)
-//  - ยอดขาย = รวมราคาของนัดที่วันนัดตรงกับวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
+//  - ยอดขาย = เงินมัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
 // ─── 📨 ส่งกลุ่ม: เติมเทมเพลตข้อความส่งกลุ่มจากข้อมูลนัดหมายอัตโนมัติ ───
 // ช่องที่มีอยู่แล้วในนัด (ชื่อ เบอร์ อีเมล ไลน์ ที่อยู่ วันเวลานัด หมายเหตุ) ดึงมาเลย
 // ช่องเพิ่มเติม (DOB, การชำระเงิน, โปร, สาขา, ช่องทาง, เซลล์) เก็บใน report_info ของนัดนั้น
@@ -2709,7 +2697,7 @@ function statsForDays(days){
     const d=a.date?String(a.date).slice(0,10):null;
     if(d&&res[d]){
       if(a.status==='cancelled') res[d].cancelled++;
-      else{res[d].apts++;res[d].revenue+=Number(a.price)||0;}
+      else{res[d].apts++;}
     }
     MILESTONE_ORDER.forEach(k=>{
       if(!(a.milestones&&a.milestones[k]))return;
@@ -2801,8 +2789,7 @@ function renderTermsPage(){
   ];
   const valueOf=(metric,t)=>{
     if(metric.key==='revenue'){
-      return ownApts().filter(a=>a.status!=='cancelled'&&inRange(a.date,t)).reduce((s,a)=>s+(Number(a.price)||0),0)
-        + ownApts().filter(a=>hasDeposit(a)&&inRange(depositDate(a),t)).length*DEPOSIT_AMOUNT;
+      return ownApts().filter(a=>hasDeposit(a)&&inRange(depositDate(a),t)).length*DEPOSIT_AMOUNT;
     }
     return ownApts().filter(a=>a.milestones&&a.milestones[metric.key]&&inRange(milestoneDate(a,metric.key),t)).length;
   };
