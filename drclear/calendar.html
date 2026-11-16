@@ -702,9 +702,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="stat-card-value"><span id="statMsCommence">–</span><span class="stat-card-value-target" id="targetLabelMsCommence"></span></div>
         <div class="stat-card-bar" id="barWrapMsCommence" style="display:none"><div class="stat-card-bar-fill" id="barMsCommence" style="background:var(--status-msCommence)"></div></div>
       </div>
-      <div class="stat-card" style="border-left-color:#E67E22" title="รวมราคาของนัดหมายในเดือนนี้ (ไม่นับที่ยกเลิก)">
+      <div class="stat-card" style="border-left-color:#E67E22" title="ค่ารักษาของนัดในเดือนนี้ + มัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในเดือนนี้ (ไม่นับที่ยกเลิก)">
         <div class="stat-card-label">ยอดขาย</div>
         <div class="stat-card-value"><span id="statRevenue">–</span><span class="stat-card-value-target" id="targetLabelRevenue"></span></div>
+        <div id="revenueBreakdown" style="font-size:11px;line-height:1.3;color:#888;margin-top:2px"></div>
         <div class="stat-card-bar" id="barWrapRevenue" style="display:none"><div class="stat-card-bar-fill" id="barRevenue" style="background:#E67E22"></div></div>
       </div>
     </div>
@@ -2445,13 +2446,21 @@ function updateStats(){
   });
   // ยอดขาย = รวมราคาของนัดหมายที่วันนัดอยู่ในเดือนนี้ + มัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในเดือนนี้
   // (นับเดือนต่อเดือน — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่สถานะ "ยกเลิก"
-  const revenue=viewApts()
+  const revTreatment=viewApts()
     .filter(a=>a.status!=='cancelled'&&isInCurrentMonth(a.date))
-    .reduce((s,a)=>s+(Number(a.price)||0),0)
-    + viewApts().filter(a=>hasDeposit(a)&&isInCurrentMonth(depositDate(a))).length*DEPOSIT_AMOUNT;
+    .reduce((s,a)=>s+(Number(a.price)||0),0);
+  const revDepositCount=viewApts().filter(a=>hasDeposit(a)&&isInCurrentMonth(depositDate(a))).length;
+  const revDeposit=revDepositCount*DEPOSIT_AMOUNT;
+  const revenue=revTreatment+revDeposit;
   const revEl=document.getElementById('statRevenue');
   if(revEl){
     revEl.textContent='฿'+revenue.toLocaleString();
+    const bd=document.getElementById('revenueBreakdown');
+    if(bd){
+      bd.textContent=revDepositCount>0
+        ? 'ค่ารักษา ฿'+revTreatment.toLocaleString()+' + มัดจำ ฿'+revDeposit.toLocaleString()+' ('+revDepositCount+' ราย)'
+        : 'ค่ารักษา ฿'+revTreatment.toLocaleString();
+    }
     const rt=targets.revenue;
     const lbl=document.getElementById('targetLabelRevenue'),wrap=document.getElementById('barWrapRevenue'),bar=document.getElementById('barRevenue');
     if(rt&&rt>0){
