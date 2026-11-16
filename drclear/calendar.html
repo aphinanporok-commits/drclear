@@ -2416,6 +2416,11 @@ function isInCurrentMonth(dateStr){
 function milestoneDate(a,key){
   return (a.milestone_dates&&a.milestone_dates[key])||null;
 }
+// มัดจำ: การติ๊ก "Appointment" = ลูกค้าชำระมัดจำมาแล้ว 1,000 บาท (คงที่ทุกคน)
+// นับมัดจำเป็นรายได้ในเดือน/วันที่ติ๊ก Appointment จริง (milestone_dates.msAppointment) ไม่ใช่วันนัด
+const DEPOSIT_AMOUNT=1000;
+function hasDeposit(a){ return !!(a&&a.status!=='cancelled'&&a.milestones&&a.milestones.msAppointment); }
+function depositDate(a){ return hasDeposit(a)?milestoneDate(a,'msAppointment'):null; }
 function updateStats(){
   const counts={
     msAppointment:viewApts().filter(a=>a.milestones&&a.milestones.msAppointment&&isInCurrentMonth(milestoneDate(a,'msAppointment'))).length,
@@ -2438,11 +2443,12 @@ function updateStats(){
       if(barWrapEl) barWrapEl.style.display='none';
     }
   });
-  // ยอดขาย = รวมราคาของทุกนัดหมายที่ใส่ราคาไว้ และวันนัดอยู่ในเดือนนี้ (นับเดือนต่อเดือน — ขึ้นเดือนใหม่เริ่ม 0)
-  // ไม่นับรายการที่สถานะ "ยกเลิก"
+  // ยอดขาย = รวมราคาของนัดหมายที่วันนัดอยู่ในเดือนนี้ + มัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในเดือนนี้
+  // (นับเดือนต่อเดือน — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่สถานะ "ยกเลิก"
   const revenue=viewApts()
     .filter(a=>a.status!=='cancelled'&&isInCurrentMonth(a.date))
-    .reduce((s,a)=>s+(Number(a.price)||0),0);
+    .reduce((s,a)=>s+(Number(a.price)||0),0)
+    + viewApts().filter(a=>hasDeposit(a)&&isInCurrentMonth(depositDate(a))).length*DEPOSIT_AMOUNT;
   const revEl=document.getElementById('statRevenue');
   if(revEl){
     revEl.textContent='฿'+revenue.toLocaleString();
@@ -2701,6 +2707,8 @@ function statsForDays(days){
       const md=milestoneDate(a,k);
       const mds=md?String(md).slice(0,10):null;
       if(mds&&res[mds]) res[mds][k]++;
+      // มัดจำ 1,000 นับเป็นรายได้ในวันที่ติ๊ก Appointment (ไม่นับรายการที่ยกเลิก)
+      if(k==='msAppointment'&&a.status!=='cancelled'&&mds&&res[mds]) res[mds].revenue+=DEPOSIT_AMOUNT;
     });
   });
   return res;
@@ -2784,7 +2792,8 @@ function renderTermsPage(){
   ];
   const valueOf=(metric,t)=>{
     if(metric.key==='revenue'){
-      return ownApts().filter(a=>a.status!=='cancelled'&&inRange(a.date,t)).reduce((s,a)=>s+(Number(a.price)||0),0);
+      return ownApts().filter(a=>a.status!=='cancelled'&&inRange(a.date,t)).reduce((s,a)=>s+(Number(a.price)||0),0)
+        + ownApts().filter(a=>hasDeposit(a)&&inRange(depositDate(a),t)).length*DEPOSIT_AMOUNT;
     }
     return ownApts().filter(a=>a.milestones&&a.milestones[metric.key]&&inRange(milestoneDate(a,metric.key),t)).length;
   };
