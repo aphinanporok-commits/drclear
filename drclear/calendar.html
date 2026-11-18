@@ -101,7 +101,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
 .cal-wd{text-align:center;padding:10px 4px;font-size:13px;font-weight:800;color:#8A9BAE;letter-spacing:.5px;}
 .cal-wd:first-child{color:#E74C3C;}.cal-wd:last-child{color:#2980B9;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--cal-border);gap:1px;}
-.cal-cell{background:var(--surface);min-height:150px;padding:10px 12px 10px;cursor:pointer;transition:background .12s;position:relative;}
+.cal-cell{background:var(--surface);height:150px;overflow:hidden;padding:10px 12px 10px;cursor:pointer;transition:background .12s;position:relative;}
 .cal-cell:hover{background:var(--cal-head-bg);}
 .cal-cell.other-month{background:color-mix(in srgb,var(--surface) 60%,var(--bg) 40%);}
 .cal-cell.other-month .cell-num{color:var(--cal-other);}
@@ -119,7 +119,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
   line-height:1;visibility:hidden;flex-shrink:0;}
 .cal-cell:hover .cell-add{visibility:visible;}
 .cell-add:hover{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);}
-.cal-chips{display:flex;flex-direction:column;gap:3px;}
+.cal-chips{display:flex;flex-direction:column;gap:3px;overflow:hidden;min-height:0;}
 .apt-chip{height:25px;border-radius:5px;padding:0 7px;font-size:12.5px;font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;cursor:pointer;}
 .apt-chip:hover{opacity:.8;}
@@ -2321,7 +2321,6 @@ const patients=[
 ];
 
 let currentDate=new Date(), editingId=null, selectedDate=null;
-let expandedDays=new Set(); // dates whose calendar cell is showing all appointments inline instead of "+N เพิ่มเติม"
 let activeFilter='all';
 let listPage=1;
 const LIST_PAGE_SIZE=10;
@@ -3251,9 +3250,8 @@ function renderCalendar(){
     };
     const apts=(aptMap[s]||[]).sort((a,b)=>a.time.localeCompare(b.time));
     const ch=cell.querySelector('.cal-chips');
-    const MAX_CHIPS=5;
-    const isExpanded=expandedDays.has(s);
-    const visibleApts=isExpanded?apts:apts.slice(0,MAX_CHIPS);
+    const MAX_CHIPS=3;
+    const visibleApts=apts.slice(0,MAX_CHIPS);
     visibleApts.forEach(apt=>{
       const chip=document.createElement('div');
       chip.className='apt-chip';
@@ -3276,12 +3274,8 @@ function renderCalendar(){
     if(apts.length>MAX_CHIPS){
       const more=document.createElement('div');
       more.className='apt-more';
-      more.textContent=isExpanded?'ซ่อน':`+${apts.length-MAX_CHIPS} เพิ่มเติม`;
-      more.onclick=e=>{
-        e.stopPropagation();
-        if(expandedDays.has(s)) expandedDays.delete(s); else expandedDays.add(s);
-        renderCalendar();
-      };
+      more.textContent=`+${apts.length-MAX_CHIPS} เพิ่มเติม`;
+      more.onclick=e=>{ e.stopPropagation(); openDayPanel(s); };
       ch.appendChild(more);
     }
   }
