@@ -702,7 +702,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="stat-card-value"><span id="statMsCommence">–</span><span class="stat-card-value-target" id="targetLabelMsCommence"></span></div>
         <div class="stat-card-bar" id="barWrapMsCommence" style="display:none"><div class="stat-card-bar-fill" id="barMsCommence" style="background:var(--status-msCommence)"></div></div>
       </div>
-      <div class="stat-card" style="border-left-color:#E67E22" title="รวมค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในเดือนนี้ (ไม่นับที่ยกเลิก)">
+      <div class="stat-card" style="border-left-color:#E67E22" title="รวมราคานัดในเดือนนี้ + ค่าแสกนฟันของนัดที่ติ๊ก Scan Done (ไม่นับที่ยกเลิก)">
         <div class="stat-card-label">ยอดขาย</div>
         <div class="stat-card-value"><span id="statRevenue">–</span><span class="stat-card-value-target" id="targetLabelRevenue"></span></div>
         <div class="stat-card-bar" id="barWrapRevenue" style="display:none"><div class="stat-card-bar-fill" id="barRevenue" style="background:#E67E22"></div></div>
@@ -2448,9 +2448,10 @@ function updateStats(){
       if(barWrapEl) barWrapEl.style.display='none';
     }
   });
-  // ยอดขาย = รวมค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในเดือนนี้
-  // (นับจากเดือนที่ติ๊ก Scan Done จริง — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่ยกเลิก
-  const revenue=viewApts().filter(a=>scanCounted(a)&&isInCurrentMonth(scanDate(a))).reduce((s,a)=>s+scanFee(a),0);
+  // ยอดขาย = รวมราคานัด (แพ็กเกจ/แผน) ที่วันนัดอยู่ในเดือนนี้ + ค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในเดือนนี้
+  // (ราคานับตามวันนัด, ค่าแสกนนับตามวันที่ติ๊ก Scan Done — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่ยกเลิก
+  const revenue=viewApts().filter(a=>a.status!=='cancelled'&&isInCurrentMonth(a.date)).reduce((s,a)=>s+(Number(a.price)||0),0)
+    + viewApts().filter(a=>scanCounted(a)&&isInCurrentMonth(scanDate(a))).reduce((s,a)=>s+scanFee(a),0);
   const revEl=document.getElementById('statRevenue');
   if(revEl){
     revEl.textContent='฿'+revenue.toLocaleString();
@@ -2473,7 +2474,7 @@ function updateStats(){
 // ─── สถิติ: สรุปวันนี้ + ตารางรายวันทั้งเดือน ───
 // คำนวณจากข้อมูลนัดหมายที่เก็บอยู่แล้ว จึงดูย้อนหลังได้ทุกเดือน
 //  - Appointment / Scan Done / Commence = จำนวนที่ติ๊กสำเร็จในวันนั้น (milestone_dates)
-//  - ยอดขาย = รวมค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
+//  - ยอดขาย = ราคานัดของวันนั้น + ค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
 // ─── 📨 ส่งกลุ่ม: เติมเทมเพลตข้อความส่งกลุ่มจากข้อมูลนัดหมายอัตโนมัติ ───
 // ช่องที่มีอยู่แล้วในนัด (ชื่อ เบอร์ อีเมล ไลน์ ที่อยู่ วันเวลานัด หมายเหตุ) ดึงมาเลย
 // ช่องเพิ่มเติม (DOB, การชำระเงิน, โปร, สาขา, ช่องทาง, เซลล์) เก็บใน report_info ของนัดนั้น
@@ -2702,7 +2703,7 @@ function statsForDays(days){
     const d=a.date?String(a.date).slice(0,10):null;
     if(d&&res[d]){
       if(a.status==='cancelled') res[d].cancelled++;
-      else{res[d].apts++;}
+      else{res[d].apts++;res[d].revenue+=Number(a.price)||0;}
     }
     MILESTONE_ORDER.forEach(k=>{
       if(!(a.milestones&&a.milestones[k]))return;
@@ -2794,7 +2795,8 @@ function renderTermsPage(){
   ];
   const valueOf=(metric,t)=>{
     if(metric.key==='revenue'){
-      return ownApts().filter(a=>scanCounted(a)&&inRange(scanDate(a),t)).reduce((s,a)=>s+scanFee(a),0);
+      return ownApts().filter(a=>a.status!=='cancelled'&&inRange(a.date,t)).reduce((s,a)=>s+(Number(a.price)||0),0)
+        + ownApts().filter(a=>scanCounted(a)&&inRange(scanDate(a),t)).reduce((s,a)=>s+scanFee(a),0);
     }
     return ownApts().filter(a=>a.milestones&&a.milestones[metric.key]&&inRange(milestoneDate(a,metric.key),t)).length;
   };
