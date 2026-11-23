@@ -702,7 +702,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
         <div class="stat-card-value"><span id="statMsCommence">–</span><span class="stat-card-value-target" id="targetLabelMsCommence"></span></div>
         <div class="stat-card-bar" id="barWrapMsCommence" style="display:none"><div class="stat-card-bar-fill" id="barMsCommence" style="background:var(--status-msCommence)"></div></div>
       </div>
-      <div class="stat-card" style="border-left-color:#E67E22" title="เงินมัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในเดือนนี้ (ไม่นับที่ยกเลิก)">
+      <div class="stat-card" style="border-left-color:#E67E22" title="รวมค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในเดือนนี้ (ไม่นับที่ยกเลิก)">
         <div class="stat-card-label">ยอดขาย</div>
         <div class="stat-card-value"><span id="statRevenue">–</span><span class="stat-card-value-target" id="targetLabelRevenue"></span></div>
         <div class="stat-card-bar" id="barWrapRevenue" style="display:none"><div class="stat-card-bar-fill" id="barRevenue" style="background:#E67E22"></div></div>
@@ -1073,6 +1073,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
       <div class="form-row" id="fPkgRow" style="margin-top:12px">
         <label class="form-label">เลือกแพ็กเกจราคา <span style="font-weight:400;color:var(--text-muted);font-size:11.5px;">(ใส่ราคาให้อัตโนมัติ)</span></label>
         <select class="form-select" id="fPkg" onchange="applyPkgToForm(this.value)"></select>
+      </div>
+      <div class="form-row" style="margin-top:12px">
+        <label class="form-label">ค่าแสกนฟัน (บาท) <span style="font-weight:400;color:var(--text-muted);font-size:11.5px;">(นับเข้ายอดขายเมื่อติ๊ก Scan Done)</span></label>
+        <input class="form-input" type="number" min="0" id="fScanFee" placeholder="1000">
       </div>
       <div class="form-row" style="margin-top:12px">
         <label class="form-label">นับเข้า KPI ขั้นไหนแล้วบ้าง <span style="font-weight:400;color:var(--text-muted);font-size:11.5px;">(ติ๊กอัตโนมัติตามสถานะ — แก้เองได้ถ้าใส่ผิด)</span></label>
@@ -2415,11 +2419,13 @@ function isInCurrentMonth(dateStr){
 function milestoneDate(a,key){
   return (a.milestone_dates&&a.milestone_dates[key])||null;
 }
-// มัดจำ: การติ๊ก "Appointment" = ลูกค้าชำระมัดจำมาแล้ว 1,000 บาท (คงที่ทุกคน)
-// นับมัดจำเป็นรายได้ในเดือน/วันที่ติ๊ก Appointment จริง (milestone_dates.msAppointment) ไม่ใช่วันนัด
-const DEPOSIT_AMOUNT=1000;
-function hasDeposit(a){ return !!(a&&a.status!=='cancelled'&&a.milestones&&a.milestones.msAppointment); }
-function depositDate(a){ return hasDeposit(a)?milestoneDate(a,'msAppointment'):null; }
+// ค่าแสกนฟัน: นับเป็นรายได้เมื่อติ๊กขั้น "Scan Done" โดยใช้ยอดที่กรอกในช่อง "ค่าแสกนฟัน"
+// ของนัดนั้น (ถ้าไม่ได้กรอก = ค่าเริ่มต้น 1,000) นับเข้าเดือน/วันที่ติ๊ก Scan Done จริง
+// (milestone_dates.msScanDone) ไม่ใช่วันนัด และไม่นับรายการที่ยกเลิก
+const SCAN_FEE_DEFAULT=1000;
+function scanCounted(a){ return !!(a&&a.status!=='cancelled'&&a.milestones&&a.milestones.msScanDone); }
+function scanDate(a){ return scanCounted(a)?milestoneDate(a,'msScanDone'):null; }
+function scanFee(a){ const v=a?a.scan_fee:null; if(v===null||v===undefined||v==='')return SCAN_FEE_DEFAULT; const n=Number(v); return isNaN(n)?SCAN_FEE_DEFAULT:n; }
 function updateStats(){
   const counts={
     msAppointment:viewApts().filter(a=>a.milestones&&a.milestones.msAppointment&&isInCurrentMonth(milestoneDate(a,'msAppointment'))).length,
@@ -2442,9 +2448,9 @@ function updateStats(){
       if(barWrapEl) barWrapEl.style.display='none';
     }
   });
-  // ยอดขาย = เฉพาะเงินมัดจำที่รับจริง: 1,000 ต่อ 1 นัดที่ติ๊ก Appointment ในเดือนนี้
-  // (นับจากเดือนที่ติ๊ก Appointment จริง — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่ยกเลิก
-  const revenue=viewApts().filter(a=>hasDeposit(a)&&isInCurrentMonth(depositDate(a))).length*DEPOSIT_AMOUNT;
+  // ยอดขาย = รวมค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในเดือนนี้
+  // (นับจากเดือนที่ติ๊ก Scan Done จริง — ขึ้นเดือนใหม่เริ่ม 0) ไม่นับรายการที่ยกเลิก
+  const revenue=viewApts().filter(a=>scanCounted(a)&&isInCurrentMonth(scanDate(a))).reduce((s,a)=>s+scanFee(a),0);
   const revEl=document.getElementById('statRevenue');
   if(revEl){
     revEl.textContent='฿'+revenue.toLocaleString();
@@ -2467,7 +2473,7 @@ function updateStats(){
 // ─── สถิติ: สรุปวันนี้ + ตารางรายวันทั้งเดือน ───
 // คำนวณจากข้อมูลนัดหมายที่เก็บอยู่แล้ว จึงดูย้อนหลังได้ทุกเดือน
 //  - Appointment / Scan Done / Commence = จำนวนที่ติ๊กสำเร็จในวันนั้น (milestone_dates)
-//  - ยอดขาย = เงินมัดจำ 1,000/ราย ของนัดที่ติ๊ก Appointment ในวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
+//  - ยอดขาย = รวมค่าแสกนฟันของนัดที่ติ๊ก Scan Done ในวันนั้น (ไม่นับที่ยกเลิก) — นับแบบเดียวกับการ์ด KPI
 // ─── 📨 ส่งกลุ่ม: เติมเทมเพลตข้อความส่งกลุ่มจากข้อมูลนัดหมายอัตโนมัติ ───
 // ช่องที่มีอยู่แล้วในนัด (ชื่อ เบอร์ อีเมล ไลน์ ที่อยู่ วันเวลานัด หมายเหตุ) ดึงมาเลย
 // ช่องเพิ่มเติม (DOB, การชำระเงิน, โปร, สาขา, ช่องทาง, เซลล์) เก็บใน report_info ของนัดนั้น
@@ -2703,8 +2709,8 @@ function statsForDays(days){
       const md=milestoneDate(a,k);
       const mds=md?String(md).slice(0,10):null;
       if(mds&&res[mds]) res[mds][k]++;
-      // มัดจำ 1,000 นับเป็นรายได้ในวันที่ติ๊ก Appointment (ไม่นับรายการที่ยกเลิก)
-      if(k==='msAppointment'&&a.status!=='cancelled'&&mds&&res[mds]) res[mds].revenue+=DEPOSIT_AMOUNT;
+      // ค่าแสกนฟันนับเป็นรายได้ในวันที่ติ๊ก Scan Done (ไม่นับรายการที่ยกเลิก)
+      if(k==='msScanDone'&&a.status!=='cancelled'&&mds&&res[mds]) res[mds].revenue+=scanFee(a);
     });
   });
   return res;
@@ -2788,7 +2794,7 @@ function renderTermsPage(){
   ];
   const valueOf=(metric,t)=>{
     if(metric.key==='revenue'){
-      return ownApts().filter(a=>hasDeposit(a)&&inRange(depositDate(a),t)).length*DEPOSIT_AMOUNT;
+      return ownApts().filter(a=>scanCounted(a)&&inRange(scanDate(a),t)).reduce((s,a)=>s+scanFee(a),0);
     }
     return ownApts().filter(a=>a.milestones&&a.milestones[metric.key]&&inRange(milestoneDate(a,metric.key),t)).length;
   };
@@ -3398,6 +3404,8 @@ function openModal(s,apt){
   document.getElementById('fAddress').value=apt?(apt.address||''):'';
   document.getElementById('fSource').value=apt?(apt.source||''):'';
   document.getElementById('fPrice').value=apt?(apt.price||''):'';
+  // ค่าแสกนฟัน: นัดใหม่ตั้งต้น 1000, นัดเดิมโชว์ยอดที่เคยกรอก (ถ้าว่างใช้ 1000)
+  document.getElementById('fScanFee').value=apt?((apt.scan_fee===0||apt.scan_fee)?apt.scan_fee:1000):1000;
   refreshPkgSelect();
   document.getElementById('fNotes').value=apt?(apt.notes||''):'';
   document.getElementById('fFollowup').value=apt?(apt.followup_date||''):'';
@@ -3463,6 +3471,7 @@ function finalizeSaveApt(name,date,time,existingApt,ownerId,formMilestones,newMi
     source:document.getElementById('fSource').value||null,
     notes:document.getElementById('fNotes').value.trim()||null,
     price:parseFloat(document.getElementById('fPrice').value)||null,
+    scan_fee:(function(){const v=document.getElementById('fScanFee').value;if(v==='')return 1000;const n=parseFloat(v);return isNaN(n)?1000:n;})(),
     followup_date:document.getElementById('fFollowup').value||null,
     // The checkboxes are the source of truth here (auto-ticked cumulatively as the
     // status dropdown changes, but staff can manually correct a wrong one) — this
