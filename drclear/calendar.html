@@ -665,6 +665,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);}
       </div>
       <select class="sort-select status-filter-select" id="statusFilterSel" onchange="setFilter(this.value)"></select>
       <select class="sort-select" id="sortSel" onchange="listFilterChanged()">
+        <option value="date-today" selected>วันนัด · วันนี้บนสุด</option>
         <option value="date-asc">วันที่ ↑ เร็วสุด</option>
         <option value="date-desc">วันที่ ↓ ล่าสุด</option>
         <option value="name-asc">ชื่อ A→Z</option>
@@ -2988,11 +2989,22 @@ function getFiltered(){
     const mq=!q||a.patient_name.toLowerCase().includes(q)||(a.phone||'').includes(q)||(PROC_LABELS[a.procedure_type]||'').toLowerCase().includes(q);
     return ms&&mq;
   });
-  const sort=(document.getElementById('sortSel')||{value:'date-asc'}).value;
+  const sort=(document.getElementById('sortSel')||{value:'date-today'}).value;
   if(sort==='date-asc')  arr.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
   if(sort==='date-desc') arr.sort((a,b)=>b.date.localeCompare(a.date)||a.time.localeCompare(b.time));
   if(sort==='name-asc')  arr.sort((a,b)=>a.patient_name.localeCompare(b.patient_name,'th'));
   if(sort==='status')    arr.sort((a,b)=>{const o=['pending','confirmed','done','cancelled'];return o.indexOf(a.status)-o.indexOf(b.status)||a.date.localeCompare(b.date);});
+  if(sort==='date-today'){
+    // วันนี้/นัดที่กำลังจะถึง ไว้บนสุด (ใกล้ไปไกล) ตามด้วยนัดที่ผ่านมาแล้ว (ล่าสุดก่อน)
+    const t=todayStr();
+    arr.sort((a,b)=>{
+      const af=(a.date||'')>=t, bf=(b.date||'')>=t;
+      if(af!==bf) return af?-1:1;
+      return af
+        ? (a.date||'').localeCompare(b.date||'')||(a.time||'').localeCompare(b.time||'')
+        : (b.date||'').localeCompare(a.date||'')||(b.time||'').localeCompare(a.time||'');
+    });
+  }
   return arr;
 }
 
@@ -3012,7 +3024,7 @@ function renderList(){
   const startIdx=(listPage-1)*LIST_PAGE_SIZE;
   const pageArr=arr.slice(startIdx,startIdx+LIST_PAGE_SIZE);
 
-  const sort=(document.getElementById('sortSel')||{value:'date-asc'}).value;
+  const sort=(document.getElementById('sortSel')||{value:'date-today'}).value;
   let html='';
 
   if(sort==='status'){
